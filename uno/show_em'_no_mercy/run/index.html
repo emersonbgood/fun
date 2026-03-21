@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO Show 'em</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-board">
+        <!-- Opponents (Top, Left, Right) -->
+        <div id="player-top" class="hand opponent horizontal"></div>
+        <div id="player-left" class="hand opponent vertical"></div>
+        <div id="player-right" class="hand opponent vertical"></div>
+
+        <!-- Center Play Area -->
+        <div id="center-table">
+            <div id="deck" class="card-back">Draw</div>
+            <div id="discard-pile"></div>
+        </div>
+
+        <!-- Local Player (Bottom) -->
+        <div id="player-bottom" class="hand local horizontal"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
