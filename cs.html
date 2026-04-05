@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Card Swipe: Admin</title>
+    <style>
+        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        
+        .task-panel { 
+            position: relative; width: 500px; height: 420px; background: #222; 
+            border: 4px solid #111; border-radius: 12px; padding: 20px; box-sizing: border-box;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8); color: white;
+        }
+
+        /* The Reader "Sandwich" */
+        .reader-container {
+            width: 100%; height: 140px; margin-top: 60px; position: relative;
+        }
+
+        /* Back layer of the slot */
+        .reader-back {
+            position: absolute; width: 100%; height: 100%; background: #0a0a0a;
+            border: 4px solid #333; box-sizing: border-box; z-index: 1;
+        }
+
+        /* Front layer of the slot (This covers the card) */
+        .reader-front {
+            position: absolute; width: 110%; height: 50px; background: #1a1a1a;
+            bottom: 0; border-top: 4px solid #333; z-index: 10;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.8); pointer-events: none; left: -5%;
+        }
+
+        /* The Card - Z-index is BETWEEN back and front */
+        #wallet-card {
+            position: absolute; width: 130px; height: 85px; background: #eee;
+            border-radius: 6px; left: 300px; top: 310px; cursor: grab;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 10px;
+            box-sizing: border-box; color: #333; font-size: 10px; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 5;
+            transition: transform 0.1s;
+        }
+        #wallet-card .chip { width: 28px; height: 22px; background: #ffd700; border-radius: 4px; border: 1px solid #b8860b; }
+        #wallet-card .stripe { width: 100%; height: 18px; background: #222; margin-top: 5px; }
+
+        /* Wallet/Storage Slot at bottom */
+        .wallet-base {
+            position: absolute; bottom: 20px; right: 20px; width: 160px; height: 60px;
+            background: #111; border: 3px solid #333; border-top: none; z-index: 2;
+        }
+
+        .status-light {
+            position: absolute; right: 25px; top: 25px; width: 35px; height: 35px;
+            border-radius: 50%; background: #300; border: 3px solid #111;
+        }
+
+        .screen {
+            width: 320px; height: 45px; background: #051405; border: 2px solid #005500;
+            margin: 0 auto; display: flex; align-items: center; justify-content: center;
+            color: #0f0; font-family: monospace; font-size: 16px; box-shadow: inset 0 0 10px #000;
+        }
+
+        .instruction { text-align: center; margin-top: 15px; font-size: 13px; color: #888; font-weight: bold; letter-spacing: 1px; }
+        a {
+            position: absolute; top: 20px; left: 20px;
+            background: #5c6b73;
+            border: 4px solid #111;
+            border-radius: 4px;
+            color: #eee;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s, transform 0.05s;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.3);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <a href="../tasks.html">Back to Tasks</a>
+<div class="task-panel">
+    <div id="light" class="status-light"></div>
+    <div class="screen" id="display">PLEASE SWIPE CARD</div>
+    
+    <div class="reader-container" id="reader-hitbox">
+        <div class="reader-back"></div>
+        <div class="reader-front"></div>
+    </div>
+
+    <div class="instruction">INSERT CARD AND DRAG ACROSS</div>
+
+    <!-- The physical card -->
+    <div id="wallet-card">
+        <div class="chip"></div>
+        <div style="text-align: right;">ID CARD</div>
+        <div class="stripe"></div>
+    </div>
+
+    <div class="wallet-base"></div>
+</div>
+
+<script>
+    const card = document.getElementById('wallet-card');
+    const display = document.getElementById('display');
+    const light = document.getElementById('light');
+    const reader = document.getElementById('reader-hitbox');
+
+    let isDragging = false;
+    let startTime = 0;
+    let startX = 0;
+    let startY = 0;
+    let hasEnteredReader = false;
+
+    card.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX - card.offsetLeft;
+        startY = e.clientY - card.offsetTop;
+        card.style.cursor = 'grabbing';
+        card.style.transition = "none";
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        let x = e.clientX - startX;
+        let y = e.clientY - startY;
+
+        // Clamp to panel
+        x = Math.max(-20, Math.min(x, 380));
+        y = Math.max(0, Math.min(y, 320));
+        
+        const readerRect = reader.getBoundingClientRect();
+        
+        // Detection Logic
+        if (e.clientY > readerRect.top && e.clientY < readerRect.bottom) {
+            // SNAP vertically to the slot track
+            y = readerRect.top + (readerRect.height / 2) - (card.offsetHeight / 2) - 20; 
+            
+            if (!hasEnteredReader && x > 20) {
+                hasEnteredReader = true;
+                startTime = performance.now();
+                display.textContent = "READING...";
+            }
+        } else {
+            hasEnteredReader = false;
+        }
+
+        card.style.left = x + 'px';
+        card.style.top = y + 'px';
+    });
+
+    window.addEventListener('mouseup', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        card.style.cursor = 'grab';
+
+        const finalX = parseInt(card.style.left);
+        
+        if (finalX > 330 && hasEnteredReader) {
+            const duration = performance.now() - startTime;
+            
+            if (duration < 350) {
+                showStatus("TOO FAST", "#f00");
+            } else if (duration > 900) {
+                showStatus("TOO SLOW", "#f00");
+            } else {
+                showStatus("TASK COMPLETE", "#0f0");
+                card.style.pointerEvents = 'none';
+            }
+        } else {
+            if (display.textContent !== "TASK COMPLETE") showStatus("BAD READ", "#f00");
+        }
+        
+        // Reset card to "wallet" position if not finished
+        if (display.textContent !== "TASK COMPLETE") {
+            setTimeout(() => {
+                card.style.transition = "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
+                card.style.left = "300px";
+                card.style.top = "310px";
+            }, 400);
+        }
+    });
+
+    function showStatus(msg, color) {
+        display.textContent = msg;
+        light.style.background = color;
+        if (color === "#0f0") {
+            light.style.boxShadow = "0 0 20px #0f0";
+            display.style.borderColor = "#0f0";
+        }
+    }
+</script>
+</body>
+</html>

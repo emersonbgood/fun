@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Accept Power: Navigation</title>
+    <style>
+        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; font-family: 'Courier New', monospace; }
+        
+        .task-panel { 
+            position: relative; width: 450px; height: 500px; background: #333; 
+            border: 6px solid #111; border-radius: 10px; display: flex; flex-direction: column;
+            align-items: center; padding: 20px; box-sizing: border-box;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        .panel-header { width: 100%; text-align: left; color: #888; font-weight: bold; font-size: 14px; margin-bottom: 20px; letter-spacing: 2px; }
+
+        .flow-container {
+            position: relative; width: 100%; height: 300px; background: #111; 
+            border: 4px solid #222; margin-bottom: 20px; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .wire { position: absolute; width: 10px; background: #222; border: 2px solid #333; z-index: 1; left: 50%; transform: translateX(-50%); }
+        .wire-top { top: 0; height: 100px; }
+        .wire-bottom { bottom: 0; height: 100px; }
+
+        #switch-line {
+            position: relative; width: 12px; height: 100px; background: #444;
+            border: 2px solid #222; border-radius: 5px; cursor: pointer;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.3s;
+            z-index: 5;
+        }
+
+        /* Faster Pulse with Trail */
+        .pulse {
+            position: absolute; width: 8px; height: 20px; background: #ffd700;
+            border-radius: 2px; box-shadow: 0 0 12px #ffd700, 0 10px 15px rgba(255, 215, 0, 0.5); 
+            z-index: 10; left: 50%; transform: translateX(-50%);
+        }
+
+        .status-msg { font-weight: bold; font-size: 22px; color: #ffd700; text-align: center; min-height: 30px; }
+        .instruction { color: #666; font-size: 11px; margin-top: 5px; text-transform: uppercase; }
+        a {
+            background: #5c6b73;
+            border: 4px solid #111;
+            border-radius: 4px;
+            color: #eee;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s, transform 0.05s;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.3);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <a href="../tasks.html">Back to Tasks</a>
+
+<div class="task-panel">
+    <div class="panel-header">ACCEPT POWER: NAVIGATION</div>
+
+    <div class="flow-container" id="flow-box">
+        <div class="wire wire-top"></div>
+        <div id="switch-line"></div>
+        <div class="wire wire-bottom"></div>
+    </div>
+
+    <div id="status" class="status-msg">OVERRIDE REQUIRED</div>
+    <div class="instruction">CLICK TO CALIBRATE CIRCUIT</div>
+</div>
+
+<script>
+    const switchLine = document.getElementById('switch-line');
+    const flowBox = document.getElementById('flow-box');
+    const status = document.getElementById('status');
+
+    let isComplete = false;
+    let currentAngle = Math.floor(Math.random() * 80) + 50; 
+    switchLine.style.transform = `rotate(${currentAngle}deg)`;
+
+    switchLine.addEventListener('click', () => {
+        if (isComplete) return;
+        currentAngle = 0;
+        switchLine.style.transform = `rotate(0deg)`;
+        switchLine.style.background = "#0f0";
+        switchLine.style.boxShadow = "0 0 20px #0f0";
+        completeTask();
+    });
+
+    function createPulse() {
+        const pulse = document.createElement('div');
+        pulse.className = 'pulse';
+        pulse.style.top = '-20px';
+        flowBox.appendChild(pulse);
+
+        let posY = -20;
+        const speed = 7; // Speed increased from 4 to 7
+
+        const move = () => {
+            posY += speed;
+            pulse.style.top = posY + 'px';
+
+            // Collision with Switch
+            if (posY >= 90 && posY <= 190) {
+                if (currentAngle !== 0) {
+                    pulse.style.opacity = '0';
+                    setTimeout(() => pulse.remove(), 50);
+                    return;
+                }
+            }
+
+            // Continuous flow to bottom
+            if (posY > 320) {
+                pulse.remove();
+                return;
+            }
+
+            requestAnimationFrame(move);
+        };
+        requestAnimationFrame(move);
+    }
+
+    // Spawn pulses faster (every 400ms instead of 800ms)
+    const pulseInterval = setInterval(createPulse, 100);
+
+    function completeTask() {
+        isComplete = true;
+        status.textContent = "POWER ACCEPTED";
+        status.style.color = "#0f0";
+        switchLine.style.cursor = "default";
+    }
+</script>
+</body>
+</html>

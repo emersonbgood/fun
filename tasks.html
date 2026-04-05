@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        
+        .task-panel { 
+            position: relative; width: 700px; height: 500px; background: #3a3a3a; 
+            border: 6px solid #111; border-radius: 12px; display: flex; flex-direction: column;
+            align-items: center; padding: 25px; box-sizing: border-box;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        .panel-header { width: 100%; text-align: left; color: #888; font-size: 14px; margin-bottom: 20px; letter-spacing: 2px; }
+
+        /* The 2x5 Grid */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            height: 125px;
+        }
+
+        a {
+            background: #5c6b73;
+            border: 4px solid #111;
+            border-radius: 4px;
+            color: #eee;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s, transform 0.05s;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.3);
+            text-decoration: none;
+        }
+
+        a:active { transform: scale(0.95); }
+
+        /* Pressed State */
+        a.pressed {
+            background: #00ff00 !important;
+            color: #000;
+            box-shadow: 0 0 15px #00ff00;
+            pointer-events: none;
+        }
+
+        /* Error Flash */
+        .error-shake { animation: shake 0.3s; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .status-msg { margin-top: 40px; font-size: 24px; color: #aaa; text-align: center; width: 100%; height: 30px; }
+        .success { color: #0f0 !important; text-shadow: 0 0 10px #0f0; }
+    </style>
+</head>
+<body>
+
+<div class="task-panel" id="panel">
+    <div class="grid-container" id="grid">
+        <a href="tasks/fw.html">fix wiring</a>
+        <a href="tasks/cs.html">swipe card</a>
+        <a href="tasks/ct.html">collect trash</a>
+        <a href="tasks/tc.html">empty trash</a>
+        <a href="tasks/kp.html">keypad</a>
+        <a href="tasks/cd.html">calabrate distributer</a>
+        <a href="tasks/dp.html">divert power</a>
+        <a href="tasks/ap.html">accept power</a>
+        <a href="tasks/dl.html">download data</a>
+        <a href="tasks/ul.html">upload data</a>
+    </div>
+
+    <div id="status" class="status-msg">based on a famous game</div>
+</div>
+</body>
+</html>

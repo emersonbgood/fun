@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unlock Manifolds</title>
+    <style>
+        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        
+        .task-panel { 
+            position: relative; width: 450px; height: 500px; background: #3a3a3a; 
+            border: 6px solid #111; border-radius: 12px; display: flex; flex-direction: column;
+            align-items: center; padding: 25px; box-sizing: border-box;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        .panel-header { width: 100%; text-align: left; color: #888; font-size: 14px; margin-bottom: 20px; letter-spacing: 2px; }
+
+        /* The 2x5 Grid */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            height: 125px;
+        }
+
+        .num-btn {
+            background: #5c6b73;
+            border: 4px solid #111;
+            border-radius: 4px;
+            color: #eee;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s, transform 0.05s;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.3);
+        }
+
+        .num-btn:active { transform: scale(0.95); }
+
+        /* Pressed State */
+        .num-btn.pressed {
+            background: #00ff00 !important;
+            color: #000;
+            box-shadow: 0 0 15px #00ff00;
+            pointer-events: none;
+        }
+
+        /* Error Flash */
+        .error-shake { animation: shake 0.3s; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .status-msg { margin-top: 40px; font-size: 24px; color: #aaa; text-align: center; width: 100%; height: 30px; }
+        .success { color: #0f0 !important; text-shadow: 0 0 10px #0f0; }
+    </style>
+</head>
+<body>
+
+<div class="task-panel" id="panel">
+    <div class="panel-header">UNLOCK MANIFOLDS</div>
+
+    <div class="grid-container" id="grid">
+        <!-- Buttons 1-10 will be generated here -->
+    </div>
+
+    <div id="status" class="status-msg">1 2 3 4 5 6 7 8 9 10</div>
+</div>
+
+<script>
+    const grid = document.getElementById('grid');
+    const status = document.getElementById('status');
+    const panel = document.getElementById('panel');
+    
+    let nextExpected = 1;
+    let buttons = [];
+
+    function initTask() {
+        grid.innerHTML = '';
+        nextExpected = 1;
+        status.classList.remove('success');
+        status.textContent = "1 2 3 4 5 6 7 8 9 10";
+
+        // Create numbers 1-10 and shuffle them
+        const numbers = Array.from({length: 10}, (_, i) => i + 1);
+        numbers.sort(() => Math.random() - 0.5);
+
+        numbers.forEach(num => {
+            const btn = document.createElement('div');
+            btn.className = 'num-btn';
+            btn.textContent = num;
+            btn.dataset.value = num;
+            
+            btn.addEventListener('click', () => handlePress(btn, num));
+            
+            grid.appendChild(btn);
+            buttons.push(btn);
+        });
+    }
+
+    function handlePress(btn, value) {
+        if (value === nextExpected) {
+            // Correct hit
+            btn.classList.add('pressed');
+            nextExpected++;
+            
+            if (nextExpected > 10) {
+                status.textContent = "TASK COMPLETE";
+                status.classList.add('success');
+            }
+        } else {
+            // Mistake: Reset everything
+            panel.classList.add('error-shake');
+            setTimeout(() => panel.classList.remove('error-shake'), 300);
+            
+            // Reset all buttons
+            document.querySelectorAll('.num-btn').forEach(b => {
+                b.classList.remove('pressed');
+            });
+            nextExpected = 1;
+        }
+    }
+
+    initTask();
+</script>
+</body>
+</html>

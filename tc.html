@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head> 
+    <title>Trash Chute</title>
+    <style>
+        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; font-family: sans-serif; }
+        
+        .task-panel { 
+            position: relative; width: 400px; height: 550px; background: #2c2c2c; 
+            border: 6px solid #111; border-radius: 12px; display: flex;
+            padding: 20px; box-sizing: border-box; box-shadow: 0 0 40px rgba(0,0,0,0.8);
+        }
+
+        /* The Main Chute */
+        .chute-container {
+            position: relative; width: 220px; height: 100%; background: #111;
+            border: 4px solid #333; overflow: hidden; border-radius: 4px;
+        }
+
+        /* Lever Area */
+        .lever-area {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding-left: 20px;
+        }
+
+        .lever-track {
+            position: relative; width: 15px; height: 300px; background: #1a1a1a;
+            border: 2px solid #000; border-radius: 10px;
+        }
+
+        #lever-handle {
+            position: absolute; top: 0; left: -25px; width: 60px; height: 40px;
+            background: #d32f2f; border: 4px solid #111; border-radius: 6px;
+            cursor: grab; box-shadow: 0 5px 0 #8b0000; z-index: 10;
+        }
+        #lever-handle:active { cursor: grabbing; }
+
+        /* Trash Items */
+        .trash {
+            position: absolute; width: 30px; height: 30px; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; pointer-events: none; z-index: 5;
+        }
+
+        .vibrate { animation: vibrate 0.1s infinite; }
+        @keyframes vibrate {
+            0% { transform: translate(1px, 1px); }
+            50% { transform: translate(-1px, -1px); }
+            100% { transform: translate(1px, -1px); }
+        }
+
+        #status {
+            position: absolute; top: 20px; right: 20px; color: #fff;
+            font-weight: bold; font-size: 14px; letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="task-panel" id="main-panel">
+    <div id="status">STORAGE: EMPTY</div>
+    
+    <div class="chute-container" id="chute">
+        <!-- Trash items will be spawned here -->
+    </div>
+
+    <div class="lever-area">
+        <div class="lever-track">
+            <div id="lever-handle"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const handle = document.getElementById('lever-handle');
+    const chute = document.getElementById('chute');
+    const panel = document.getElementById('main-panel');
+    const status = document.getElementById('status');
+
+    let isPulling = false;
+    let currentY = 0;
+    const maxY = 260;
+    const trashItems = ['🍂', '📄', '🦴', '💎', '🍌', '🥫', '📦'];
+    let activeTrash = [];
+
+    // 1. Setup Initial Trash
+    function spawnInitialTrash() {
+        for (let i = 0; i < 25; i++) {
+            const item = document.createElement('div');
+            item.className = 'trash';
+            item.textContent = trashItems[Math.floor(Math.random() * trashItems.length)];
+            
+            // Random scatter within the chute
+            const x = Math.random() * 180;
+            const y = 300 + Math.random() * 200; // Start at the bottom half
+            
+            item.style.left = x + 'px';
+            item.style.bottom = y + 'px';
+            
+            chute.appendChild(item);
+            activeTrash.push({ element: item, x, y });
+        }
+    }
+
+    // 2. Interaction Logic
+    handle.addEventListener('mousedown', (e) => {
+        isPulling = true;
+        handle.style.transition = 'none';
+        panel.classList.add('vibrate');
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isPulling) return;
+
+        const rect = handle.parentElement.getBoundingClientRect();
+        let y = e.clientY - rect.top - 20;
+        y = Math.max(0, Math.min(y, maxY));
+        
+        currentY = y;
+        handle.style.top = y + 'px';
+
+        // If lever is held near bottom, empty the trash
+        if (y > 240) {
+            emptyTrash();
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isPulling = false;
+        panel.classList.remove('vibrate');
+        
+        // Snap back to top if released
+        handle.style.transition = 'top 0.3s cubic-bezier(0.47, 0, 0.745, 0.715)';
+        handle.style.top = '0px';
+        currentY = 0;
+    });
+
+    // 3. Animation Logic
+    function emptyTrash() {
+        if (activeTrash.length === 0) {
+            status.textContent = "TASK COMPLETE";
+            status.style.color = "#0f0";
+            return;
+        }
+
+        activeTrash.forEach((obj, index) => {
+            obj.y -= 8; // Fall speed
+            obj.element.style.bottom = obj.y + 'px';
+            
+            // Remove when off-screen
+            if (obj.y < -50) {
+                obj.element.remove();
+                activeTrash.splice(index, 1);
+            }
+        });
+    }
+
+    spawnInitialTrash();
+</script>
+</body>
+</html>

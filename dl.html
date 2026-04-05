@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Download Data</title>
+    <style>
+        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
+        
+        .task-panel { 
+            position: relative; width: 650px; height: 450px; background: #5a7a91; 
+            border: 15px solid #888; border-radius: 25px; display: flex; flex-direction: column;
+            align-items: center; padding: 20px; box-sizing: border-box;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.3), 0 0 30px rgba(0,0,0,0.8);
+            outline: 5px solid #333; perspective: 1000px;
+        }
+
+        .transfer-box {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            width: 100%; height: 220px; position: relative; padding: 0 50px; box-sizing: border-box;
+            margin-top: 30px;
+        }
+
+        /* 3D Folder Container */
+        .folder-wrapper { display: flex; flex-direction: column; align-items: center; gap: 15px; perspective: 1000px; }
+        
+        .folder-base { 
+            width: 140px; height: 100px; background: #f9dfad; border: 4px solid #4a3821; 
+            border-radius: 4px; position: relative; box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+            transform-style: preserve-3d;
+        }
+
+        /* The Front Flap that opens */
+        .folder-flap {
+            position: absolute; width: 100%; height: 100%; background: #f9dfad;
+            border: 4px solid #4a3821; border-radius: 4px; left: -4px; top: -4px;
+            transform-origin: bottom; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10; pointer-events: none;
+        }
+
+        /* Folder Tab */
+        .folder-base::before { 
+            content: ''; position: absolute; top: -18px; left: -4px; 
+            width: 50px; height: 15px; background: #f9dfad; border: 4px solid #4a3821; 
+            border-bottom: none; border-radius: 8px 8px 0 0; 
+        }
+
+        .open-flap { transform: rotateX(-50deg); }
+
+        .folder-label { color: #fff; font-size: 24px; font-weight: bold; text-shadow: 2px 2px #000; z-index: 15; }
+
+        /* The Character - Bigger and Slower */
+        #file {
+            position: absolute; width: 70px; height: 80px; left: 80px; bottom: 40px; 
+            opacity: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+        }
+        #file img { width: 100%; height: auto; image-rendering: pixelated; }
+
+        @keyframes waddle {
+            0% { transform: rotate(-8deg); }
+            50% { transform: rotate(8deg); }
+            100% { transform: rotate(-8deg); }
+        }
+        .walking { animation: waddle 0.3s infinite; }
+
+        .btn-download {
+            margin-top: 40px; padding: 10px 30px; background: #7f7f7f; 
+            border: 3px solid #333; border-radius: 4px; color: #eee; 
+            font-size: 22px; cursor: pointer; font-family: inherit;
+        }
+        .btn-download:disabled { display: none; }
+
+        .progress-container { width: 85%; margin-top: 30px; display: none; }
+        .progress-bar { width: 100%; height: 30px; background: #222; border: 3px solid #444; }
+        #fill { width: 0%; height: 100%; background: #26e600; transition: width 0.2s linear; }
+        #percent { color: #fff; font-size: 20px; margin-top: 8px; text-align: center; }
+        a {
+            background: #5c6b73;
+            border: 4px solid #111;
+            border-radius: 4px;
+            color: #eee;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s, transform 0.05s;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.3);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>  
+    <a href="../tasks.html">Back to Tasks</a>
+<div class="task-panel">
+    <div class="transfer-box">
+        <div class="folder-wrapper">
+            <div class="folder-base" id="folder-1">
+                <div class="folder-flap" id="flap-1"></div>
+            </div>
+            <div class="folder-label">Cafeteria</div>
+        </div>
+        
+        <div id="file"><img src="../images/amgs.svg"></div>
+
+        <div class="folder-wrapper">
+            <div class="folder-base" id="folder-2">
+                <div class="folder-flap" id="flap-2"></div>
+            </div>
+            <div class="folder-label">My Tablet</div>
+        </div>
+    </div>
+
+    <button id="dl-btn" class="btn-download" onclick="startDownload()">Download</button>
+
+    <div id="p-container" class="progress-container">
+        <div class="progress-bar"><div id="fill"></div></div>
+        <div id="percent">0%</div>
+    </div>
+</div>
+
+<script>
+    const fill = document.getElementById('fill');
+    const percent = document.getElementById('percent');
+    const btn = document.getElementById('dl-btn');
+    const file = document.getElementById('file');
+    const pContainer = document.getElementById('p-container');
+    const flap1 = document.getElementById('flap-1');
+    const flap2 = document.getElementById('flap-2');
+
+    let progress = 0;
+    let isRunning = false;
+
+    function startDownload() {
+        if (isRunning) return;
+        isRunning = true;
+        btn.disabled = true;
+        pContainer.style.display = 'block';
+        runCycle();
+        updateProgress();
+    }
+
+    async function runCycle() {
+        if (!isRunning || progress >= 100) return;
+
+        // 1. Open Source Folder
+        flap1.classList.add('open-flap');
+        await new Promise(r => setTimeout(r, 400));
+
+        // 2. Character Pops out and walks (Significantly Slower)
+        file.style.transition = 'none';
+        file.style.left = '80px';
+        file.style.opacity = '1';
+        file.classList.add('walking');
+
+        await new Promise(r => setTimeout(r, 100));
+        
+        // Walk duration increased to 2.5 seconds
+        file.style.transition = 'left 2.5s linear';
+        file.style.left = '480px';
+
+        // 3. Close Source / Open Tablet halfway through walk
+        setTimeout(() => flap1.classList.remove('open-flap'), 1000);
+        setTimeout(() => flap2.classList.add('open-flap'), 2000);
+
+        await new Promise(r => setTimeout(r, 2500));
+
+        // 4. Character enters and Tablet Closes
+        file.style.opacity = '0';
+        file.classList.remove('walking');
+        flap2.classList.remove('open-flap');
+
+        await new Promise(r => setTimeout(r, 600));
+        
+        // Loop
+        if (progress < 100) runCycle();
+    }
+
+    function updateProgress() {
+        if (progress >= 100) {
+            percent.textContent = "100%";
+            return;
+        }
+        progress += Math.random() * 2 + 0.5;
+        if (progress > 100) progress = 100;
+        fill.style.width = progress + '%';
+        percent.textContent = Math.floor(progress) + '%';
+        setTimeout(updateProgress, 400 + Math.random() * 400);
+    }
+</script>
+</body>
+</html>

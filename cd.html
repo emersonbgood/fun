@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Calibrate Distributor: Electrical</title>
+    <style>
+        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        .task-panel { 
+            position: relative; width: 450px; height: 450px; background: #1a1a1a; 
+            border: 4px solid #111; border-radius: 12px; display: flex; padding: 20px; box-sizing: border-box; 
+        }
+        .ring-column { flex: 1; display: flex; flex-direction: column; justify-content: space-around; align-items: center; }
+        .button-column { flex: 1; display: flex; flex-direction: column; justify-content: space-around; align-items: center; }
+        
+        .ring-container { position: relative; width: 120px; height: 120px; overflow: visible; }
+        .ring { fill: none; stroke-width: 12; }
+        
+        /* The Bridge Node - Centered at 90,50 for easy rotation */
+        .node { fill: #cd7f32; stroke: #8b4513; stroke-width: 2; }
+        
+        .ring-label { fill: #333; font-family: sans-serif; font-weight: bold; pointer-events: none; }
+        
+        /* Stationary Bridge on the Right */
+        .static-bridge {
+            position: absolute; right: -22px; top: 50%; width: 28px; height: 16px;
+            background: #cd7f32; border: 2px solid #8b4513; border-radius: 2px;
+            transform: translateY(-50%); z-index: 1;
+        }
+
+        .status-bar { width: 140px; height: 35px; background: #000; border: 2px solid #555; position: relative; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; transition: width 0.3s; }
+        
+        .cal-btn { width: 110px; height: 40px; background: #444; border: 3px solid #000; border-radius: 4px; cursor: pointer; }
+        .cal-btn:active { background: #666; }
+        .cal-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        #victory { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            color: #00ff00; font-size: 28px; font-weight: bold; background: rgba(0,0,0,0.9); 
+            padding: 20px; border-radius: 10px; display: none; z-index: 10; border: 2px solid #00ff00;
+        }
+        a {
+            background: #5c6b73;
+            border: 4px solid #111;
+            border-radius: 4px;
+            color: #eee;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s, transform 0.05s;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.3);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <a href="../tasks.html">Back to Tasks</a>
+<div class="task-panel">
+    <div id="victory">TASK COMPLETED!</div>
+    
+    <div class="ring-column">
+        <!-- Ring 1 -->
+        <div style="position: relative;">
+            <svg class="ring-container" viewBox="0 0 100 100">
+                <circle class="ring" cx="50" cy="50" r="40" stroke="#FFD700" />
+                <text x="50" y="62" text-anchor="middle" class="ring-label" font-size="35">1</text>
+                <!-- Grouping the rect makes it easy to rotate around 50,50 -->
+                <g id="rotor-0"><rect class="node" x="82" y="42" width="18" height="16" rx="2" /></g>
+            </svg>
+            <div class="static-bridge"></div>
+        </div>
+        <!-- Ring 2 -->
+        <div style="position: relative;">
+            <svg class="ring-container" viewBox="0 0 100 100">
+                <circle class="ring" cx="50" cy="50" r="40" stroke="#0000FF" />
+                <text x="50" y="62" text-anchor="middle" class="ring-label" font-size="35">2</text>
+                <g id="rotor-1"><rect class="node" x="82" y="42" width="18" height="16" rx="2" /></g>
+            </svg>
+            <div class="static-bridge"></div>
+        </div>
+        <!-- Ring 3 -->
+        <div style="position: relative;">
+            <svg class="ring-container" viewBox="0 0 100 100">
+                <circle class="ring" cx="50" cy="50" r="40" stroke="#00FFFF" />
+                <text x="50" y="62" text-anchor="middle" class="ring-label" font-size="35">3</text>
+                <g id="rotor-2"><rect class="node" x="82" y="42" width="18" height="16" rx="2" /></g>
+            </svg>
+            <div class="static-bridge"></div>
+        </div>
+    </div>
+
+    <div class="button-column">
+        <div>
+            <div class="status-bar"><div id="fill-0" class="progress-fill" style="background: #FFD700;"></div></div>
+            <button class="cal-btn" onclick="calibrate(0)"></button>
+        </div>
+        <div>
+            <div class="status-bar"><div id="fill-1" class="progress-fill" style="background: #0000FF;"></div></div>
+            <button class="cal-btn" id="btn-1" onclick="calibrate(1)" disabled></button>
+        </div>
+        <div>
+            <div class="status-bar"><div id="fill-2" class="progress-fill" style="background: #00FFFF;"></div></div>
+            <button class="cal-btn" id="btn-2" onclick="calibrate(2)" disabled></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const rotors = [document.getElementById('rotor-0'), document.getElementById('rotor-1'), document.getElementById('rotor-2')];
+    const buttons = [null, document.getElementById('btn-1'), document.getElementById('btn-2')];
+    const fills = [document.getElementById('fill-0'), document.getElementById('fill-1'), document.getElementById('fill-2')];
+    
+    let angles = [0, 90, 180];
+    let isCalibrated = [false, false, false];
+    let activeRing = 0;
+    const speeds = [2.2, 3.2, 4.5];
+
+    function update() {
+        for (let i = 0; i < 3; i++) {
+            if (!isCalibrated[i]) {
+                angles[i] = (angles[i] + speeds[i]) % 360;
+                // Rotate the whole group around the center of the ring (50,50)
+                rotors[i].setAttribute('transform', `rotate(${angles[i]} 50 50)`);
+            }
+        }
+        requestAnimationFrame(update);
+    }
+
+    function calibrate(index) {
+        if (index !== activeRing) return;
+
+        const currentAngle = (angles[index] % 360 + 360) % 360;
+        
+        // Window check: 0 degrees is exactly 3 o'clock (aligned with static bridge)
+        if (currentAngle < 12 || currentAngle > 348) {
+            isCalibrated[index] = true;
+            
+            // SNAP TO PERFECT ALIGNMENT
+            angles[index] = 0;
+            rotors[index].setAttribute('transform', `rotate(0 50 50)`);
+
+            fills[index].style.width = "100%";
+            activeRing++;
+            
+            if (activeRing < 3) {
+                buttons[activeRing].disabled = false;
+            } else {
+                document.getElementById('victory').style.display = 'block';
+            }
+        } else {
+            // FAILED: Reset Global State
+            activeRing = 0;
+            isCalibrated = [false, false, false];
+            fills.forEach(f => f.style.width = "0%");
+            if (buttons[1]) buttons[1].disabled = true;
+            if (buttons[2]) buttons[2].disabled = true;
+        }
+    }
+
+    update();
+</script>
+</body>
+</html>
