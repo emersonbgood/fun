@@ -1,1 +1,16 @@
-/* for index.html in root /*
+a {
+    background: #5c6b73;
+    border: 4px solid #111;
+    border-radius: 4px;
+    color: #eee;
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.1s, transform 0.05s;
+    box-shadow: inset -4px -4px 0 rgba(0,0,0,0.3);
+    text-decoration: none;
+    underline: none;
+}
