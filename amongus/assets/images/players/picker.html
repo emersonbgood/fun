@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Costume Picker</title>
+    <style>
+        .costume {
+            width: 100px;
+            height: 100px;
+            margin: 10px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .selected {
+            border-color: blue;
+        }
+    </style>
+</head>
+<body>
+    <h1>Select a Costume</h1>
+    <div id="costume-container">
+        <!-- Add more img tags for each SVG costume in the folder -->
+        <img src="costume1.svg" alt="Costume 1" class="costume" onclick="selectCostume(this)">
+        <img src="costume2.svg" alt="Costume 2" class="costume" onclick="selectCostume(this)">
+        <!-- Repeat for other SVGs -->
+    </div>
+    <script>
+        function selectCostume(img) {
+            // Remove selection from others
+            document.querySelectorAll('.costume').forEach(c => c.classList.remove('selected'));
+            // Add selection to clicked
+            img.classList.add('selected');
+            // You can add more logic here, e.g., store selection
+            console.log('Selected: ' + img.alt);
+        }
+    </script>
+</body>
+</html>
