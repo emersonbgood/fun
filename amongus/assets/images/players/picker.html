@@ -20,19 +20,37 @@
 <body>
     <h1>Select a Costume</h1>
     <div id="costume-container">
-        <!-- Add more img tags for each SVG costume in the folder -->
         <img src="red.svg" alt="red" class="costume" onclick="selectCostume(this)">
         <img src="blue.svg" alt="blue" class="costume" onclick="selectCostume(this)">
-        <!-- Repeat for other SVGs -->
+        <img src="brown.svg" alt="brown" class="costume" onclick="selectCostume(this)">
+        <img src="gray.svg" alt="gray" class="costume" onclick="selectCostume(this)">
+        <img src="green.svg" alt="green" class="costume" onclick="selectCostume(this)">
+        <img src="lblue.svg" alt="lblue" class="costume" onclick="selectCostume(this)">
+        <img src="lgreen.svg" alt="lgreen" class="costume" onclick="selectCostume(this)">
+        <img src="pink.svg" alt="pink" class="costume" onclick="selectCostume(this)">
     </div>
+    <button id="equip-btn" onclick="equipCostume()">Equip Selected Costume</button>
+    <p id="selected-display">No costume selected</p>
     <script>
+        let selectedCostume = null;
+
         function selectCostume(img) {
             // Remove selection from others
             document.querySelectorAll('.costume').forEach(c => c.classList.remove('selected'));
             // Add selection to clicked
             img.classList.add('selected');
-            // You can add more logic here, e.g., store selection
-            console.log('Selected: ' + img.alt);
+            selectedCostume = img.alt;
+            document.getElementById('selected-display').innerText = 'Selected: ' + selectedCostume;
+            console.log('Selected: ' + selectedCostume);
+        }
+
+        function equipCostume() {
+            if (selectedCostume) {
+                localStorage.setItem('selectedCostume', selectedCostume);
+                alert('Equipped ' + selectedCostume + ' costume!');
+            } else {
+                alert('Please select a costume first.');
+            }
         }
     </script>
 </body>
