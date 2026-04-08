@@ -1,4 +1,4 @@
-const NGROK_URL = "https://YOUR_NGROK_ID.ngrok-free.app/highscore";
+const NGROK_URL = "https://tobie-uncontemning-marissa.ngrok-free.dev";
 const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-piece');
