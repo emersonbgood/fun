@@ -1,20 +1,18 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="utf-8">
-    <title>Tetris Game</title>
-    <link href="style.css" rel="stylesheet" type="text/css" />
-</head>
-<body>
+<head><title>Tetris</title></head>
+<body style="background:#202028; color:#fff; font-family:sans-serif;">
     <h1>Tetris</h1>
-    <canvas id="tetris" width="240" height="400"></canvas>
-    <div class="sidebar">
+    <canvas id="tetris" width="240" height="400" style="border:2px solid #fff;"></canvas>
+    <div style="display:inline-block; vertical-align:top; padding:20px;">
         <p>Score: <span id="score">0</span></p>
-        <div id="next-piece-container">
-            <p class="np">Next Peice:</p>
-            <canvas id="next-piece" width="120" height="120"></canvas>
+        <p>Next:</p>
+        <canvas id="next-piece" width="100" height="100" style="background:#000;"></canvas>
+        <br><button id="start-button">Start Game</button>
+        <div style="margin-top:30px; border-top:1px solid #555;">
+            <p>🏆 World Record:<br>
+            <span id="best-player">Loading...</span>: <span id="best-score">0</span></p>
         </div>
-        <button id="start-button">Start Game</button>
     </div>
     <script src="script.js"></script>
 </body>
