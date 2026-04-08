@@ -1,20 +1,71 @@
 <!DOCTYPE html>
-<html>
-<head><title>Tetris</title></head>
-<body style="background:#202028; color:#fff; font-family:sans-serif; text-align: center;">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tetris - Local Edition</title>
+    <style>
+        body {
+            background: #202028;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #game-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        canvas {
+            border: 2px solid #fff;
+            background-color: #000;
+        }
+        .stats {
+            padding: 20px;
+            border: 1px solid #555;
+            background: #2a2a35;
+            min-width: 120px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            margin-top: 10px;
+        }
+        button:hover { background: #45a049; }
+        .controls {
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
     <h1>Tetris</h1>
-    <canvas id="tetris" width="240" height="400" style="border:2px solid #fff;"></canvas>
-    <div style="display:inline-block; vertical-align:top; padding:20px; text-align: left;">
-        <p>Score: <span id="score">0</span></p>
-        <p>Next:</p>
-        <canvas id="next-piece" width="100" height="100" style="background:#000; border:1px solid #555;"></canvas>
-        <br><br>
-        <button id="start-button" style="padding: 10px 20px; cursor: pointer;">Start Game</button>
-        <p style="font-size: 0.8em; color: #aaa; margin-top: 20px;">
-            Arrows: Move/Drop<br>
-            Space: Hard Drop<br>
-            Up: Rotate
-        </p>
+
+    <div id="game-container">
+        <canvas id="tetris" width="240" height="400"></canvas>
+        
+        <div class="stats">
+            <p>Score: <span id="score">0</span></p>
+            <p>Next:</p>
+            <canvas id="next-piece" width="100" height="100"></canvas>
+            <br>
+            <button id="start-button">Start Game</button>
+            
+            <div class="controls">
+                Arrows: Move/Rotate<br>
+                Space: Hard Drop
+            </div>
+        </div>
     </div>
 
 <script>
@@ -25,66 +76,106 @@ const nextContext = nextCanvas.getContext('2d');
 const scoreElement = document.getElementById('score');
 const startButton = document.getElementById('start-button');
 
+// Scale for 20px blocks
 context.scale(20, 20);
 nextContext.scale(20, 20);
 
-let score = 0, level = 1, linesTotal = 0, dropInterval = 1000, dropCounter = 0, lastTime = 0;
+// Game State
+let score = 0;
+let dropInterval = 1000;
+let dropCounter = 0;
+let lastTime = 0;
 let gameOver = true;
 
-const colors = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
+const colors = [
+    null,
+    '#FF0D72', '#0DC2FF', '#0DFF72', 
+    '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'
+];
 
-// Define actual piece shapes
 const tetrominos = {
-    'T': [[0, 1, 0], [1, 1, 1], [0, 0, 0]],
-    'O': [[2, 2], [2, 2]],
-    'L': [[0, 0, 3], [3, 3, 3], [0, 0, 0]],
-    'J': [[4, 0, 0], [4, 4, 4], [0, 0, 0]],
-    'I': [[0, 5, 0, 0], [0, 5, 0, 0], [0, 5, 0, 0], [0, 5, 0, 0]],
+    'I': [[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]],
+    'L': [[0, 2, 0], [0, 2, 0], [0, 2, 2]],
+    'J': [[0, 3, 0], [0, 3, 0], [3, 3, 0]],
+    'O': [[4, 4], [4, 4]],
+    'Z': [[5, 5, 0], [0, 5, 5], [0, 0, 0]],
     'S': [[0, 6, 6], [6, 6, 0], [0, 0, 0]],
-    'Z': [[7, 7, 0], [0, 7, 7], [0, 0, 0]],
+    'T': [[0, 7, 0], [7, 7, 7], [0, 0, 0]],
 };
 
-let playfield = Array.from({ length: 20 }, () => Array(12).fill(0));
-const player = { pos: { x: 0, y: 0 }, matrix: null };
-const nextPiece = { matrix: null };
+const playfield = Array.from({ length: 20 }, () => Array(12).fill(0));
 
-function createPiece(type) { return tetrominos[type]; }
+const player = {
+    pos: { x: 0, y: 0 },
+    matrix: null,
+};
+
+const nextPiece = {
+    matrix: null,
+};
+
+function createPiece(type) {
+    return tetrominos[type];
+}
 
 function draw() {
+    // Fill background
     context.fillStyle = '#000';
     context.fillRect(0, 0, canvas.width, canvas.height);
+
     drawMatrix(playfield, { x: 0, y: 0 }, context);
+    drawGhost(); // Draw shadow where it will land
     drawMatrix(player.matrix, player.pos, context);
 }
 
-function drawMatrix(matrix, offset, ctx) {
-    matrix.forEach((row, y) => row.forEach((v, x) => {
-        if (v !== 0) {
-            ctx.fillStyle = colors[v];
-            ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
-        }
-    }));
+function drawMatrix(matrix, offset, ctx, colorOverride = null) {
+    matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value !== 0) {
+                ctx.fillStyle = colorOverride || colors[value];
+                ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+            }
+        });
+    });
+}
+
+function drawGhost() {
+    let ghostY = player.pos.y;
+    // Find the lowest point possible
+    while (!collide(playfield, { pos: { x: player.pos.x, y: ghostY + 1 }, matrix: player.matrix })) {
+        ghostY++;
+    }
+    // Draw in transparent white
+    drawMatrix(player.matrix, { x: player.pos.x, y: ghostY }, context, 'rgba(255, 255, 255, 0.2)');
 }
 
 function collide(field, p) {
     const [m, o] = [p.matrix, p.pos];
     for (let y = 0; y < m.length; ++y) {
         for (let x = 0; x < m[y].length; ++x) {
-            if (m[y][x] !== 0 && (field[y + o.y] && field[y + o.y][x + o.x]) !== 0) return true;
+            if (m[y][x] !== 0 && (field[y + o.y] && field[y + o.y][x + o.x]) !== 0) {
+                return true;
+            }
         }
     }
     return false;
 }
 
 function merge() {
-    player.matrix.forEach((row, y) => row.forEach((v, x) => {
-        if (v !== 0) playfield[y + player.pos.y][x + player.pos.x] = v;
-    }));
+    player.matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value !== 0) {
+                playfield[y + player.pos.y][x + player.pos.x] = value;
+            }
+        });
+    });
 }
 
 function rotate(matrix) {
     for (let y = 0; y < matrix.length; ++y) {
-        for (let x = 0; x < y; ++x) [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+        for (let x = 0; x < y; ++x) {
+            [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+        }
     }
     matrix.forEach(row => row.reverse());
 }
@@ -92,11 +183,11 @@ function rotate(matrix) {
 function arenaSweep() {
     let rowCount = 1;
     for (let y = playfield.length - 1; y > 0; --y) {
-        if (playfield[y].every(v => v !== 0)) {
+        if (playfield[y].every(value => value !== 0)) {
             const row = playfield.splice(y, 1)[0].fill(0);
             playfield.unshift(row);
             y++;
-            score += rowCount * 10;
+            score += rowCount * 100;
             rowCount *= 2;
         }
     }
@@ -119,16 +210,18 @@ function playerReset() {
     if (!nextPiece.matrix) {
         nextPiece.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
     }
+    
     player.matrix = nextPiece.matrix;
     player.pos.y = 0;
     player.pos.x = (playfield[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+    
     nextPiece.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
     drawNext();
+
     if (collide(playfield, player)) {
         gameOver = true;
-        alert("Game Over! Score: " + score);
+        alert("Game Over! Final Score: " + score);
         playfield.forEach(row => row.fill(0));
-        score = 0;
     }
 }
 
@@ -140,25 +233,30 @@ function drawNext() {
 
 function update(time = 0) {
     if (gameOver) return;
-    const dt = time - lastTime;
+    const deltaTime = time - lastTime;
     lastTime = time;
-    dropCounter += dt;
-    if (dropCounter > dropInterval) playerDrop();
+
+    dropCounter += deltaTime;
+    if (dropCounter > dropInterval) {
+        playerDrop();
+    }
+
     draw();
     requestAnimationFrame(update);
 }
 
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', event => {
     if (gameOver) return;
-    if (e.keyCode === 37) { // Left
+
+    if (event.keyCode === 37) { // Left
         player.pos.x--;
         if (collide(playfield, player)) player.pos.x++;
-    } else if (e.keyCode === 39) { // Right
+    } else if (event.keyCode === 39) { // Right
         player.pos.x++;
         if (collide(playfield, player)) player.pos.x--;
-    } else if (e.keyCode === 40) { // Down
+    } else if (event.keyCode === 40) { // Down
         playerDrop();
-    } else if (e.keyCode === 38) { // Up (Rotate)
+    } else if (event.keyCode === 38) { // Up (Rotate)
         const pos = player.pos.x;
         let offset = 1;
         rotate(player.matrix);
@@ -166,13 +264,15 @@ document.addEventListener('keydown', e => {
             player.pos.x += offset;
             offset = -(offset + (offset > 0 ? 1 : -1));
             if (offset > player.matrix[0].length) {
-                rotate(player.matrix); rotate(player.matrix); rotate(player.matrix);
+                rotate(player.matrix); rotate(player.matrix); rotate(player.matrix); // Undo
                 player.pos.x = pos;
                 return;
             }
         }
-    } else if (e.keyCode === 32) { // Space (Hard Drop)
-        while (!collide(playfield, player)) player.pos.y++;
+    } else if (event.keyCode === 32) { // Space (Hard Drop)
+        while (!collide(playfield, player)) {
+            player.pos.y++;
+        }
         player.pos.y--;
         merge();
         playerReset();
@@ -181,7 +281,6 @@ document.addEventListener('keydown', e => {
 });
 
 startButton.onclick = () => {
-    if (!gameOver) return;
     gameOver = false;
     score = 0;
     scoreElement.innerText = score;
