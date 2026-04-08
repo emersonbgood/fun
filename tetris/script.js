@@ -6,7 +6,7 @@ const startButton = document.getElementById('start-button');
 const nextPieceCanvas = document.getElementById('next-piece');
 const nextPieceContext = nextPieceCanvas.getContext('2d');
 
-context.scale(20, 20); // Each block is 20x20 game units
+context.scale(20, 20); 
 nextPieceContext.scale(20, 20);
 
 const BOARD_WIDTH = 12;
@@ -16,106 +16,73 @@ const PIECE_SIZE = 4;
 let score = 0;
 let gameOver = false;
 let animationFrameId;
+let holdPiece = null; // New: Hold Piece storage
+let canHold = true;   // New: Prevents holding twice in one turn
 
-// Colors for the standard 7 Tetrominoes (index 0 is empty)
 const colors = [
     null,
-    '#FF0D72', // T
-    '#0DC2FF', // I
-    '#0DFF72', // S
-    '#F538FF', // Z
-    '#FF8E0D', // L
-    '#FFE138', // O
-    '#3877FF', // J
+    '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF',
 ];
 
-// Tetromino matrices (FILLED IN)
 const tetrominos = {
-    'T': [
-        [0, 1, 0],
-        [1, 1, 1],
-        [0, 0, 0],
-    ],
-    'I': [
-        [0, 2, 0, 0],
-        [0, 2, 0, 0],
-        [0, 2, 0, 0],
-        [0, 2, 0, 0],
-    ],
-    'S': [
-        [0, 3, 3],
-        [3, 3, 0],
-        [0, 0, 0],
-    ],
-    'Z': [
-        [4, 4, 0],
-        [0, 4, 4],
-        [0, 0, 0],
-    ],
-    'L': [
-        [0, 0, 5],
-        [5, 5, 5],
-        [0, 0, 0],
-    ],
-    'O': [
-        [6, 6],
-        [6, 6],
-    ],
-    'J': [
-        [7, 0, 0],
-        [7, 7, 7],
-        [0, 0, 0],
-    ],
+    'T': [[0, 1, 0], [1, 1, 1], [0, 0, 0]],
+    'I': [[0, 0, 0, 0], [2, 2, 2, 2], [0, 0, 0, 0], [0, 0, 0, 0]],
+    'S': [[0, 3, 3], [3, 3, 0], [0, 0, 0]],
+    'Z': [[4, 4, 0], [0, 4, 4], [0, 0, 0]],
+    'L': [[0, 0, 5], [5, 5, 5], [0, 0, 0]],
+    'O': [[6, 6], [6, 6]],
+    'J': [[7, 0, 0], [7, 7, 7], [0, 0, 0]],
 };
 
-// Game board matrix
 const playfield = createMatrix(BOARD_WIDTH, BOARD_HEIGHT);
-const player = {
-    pos: {x: 0, y: 0},
-    matrix: null,
-    score: 0,
-};
-const nextPlayer = {
-    matrix: null,
-};
+const player = { pos: {x: 0, y: 0}, matrix: null, type: null };
+const nextPlayer = { matrix: null, type: null };
 
-// ... in the asset loading section ...
 const sounds = {
     rotate: new Audio('assets/sounds/rotate.mp3'),
     move: new Audio('assets/sounds/move.mp3'),
     land: new Audio('assets/sounds/land.mp3'),
     clear: new Audio('assets/sounds/clear.mp3'),
     gameover: new Audio('assets/sounds/gameover.mp3'),
-    music: new Audio('assets/sounds/music.mp3') // Add this line
+    music: new Audio('assets/sounds/music.mp3')
 };
-sounds.music.loop = true; // Add this line to make the music loop
-// --- GAME FUNCTIONS (rest of the code is unchanged) ---
+sounds.music.loop = true;
 
 function createMatrix(w, h) {
     const matrix = [];
-    while (h--) {
-        matrix.push(new Array(w).fill(0));
-    }
+    while (h--) { matrix.push(new Array(w).fill(0)); }
     return matrix;
+}
+
+// --- UPGRADE: GHOST PIECE ---
+function drawGhost() {
+    let ghostY = player.pos.y;
+    while (!collide(playfield, {pos: {x: player.pos.x, y: ghostY + 1}, matrix: player.matrix})) {
+        ghostY++;
+    }
+    drawMatrix(player.matrix, {x: player.pos.x, y: ghostY}, context, 'rgba(255, 255, 255, 0.2)');
 }
 
 function draw() {
     context.fillStyle = '#000';
     context.fillRect(0, 0, canvas.width, canvas.height);
     drawMatrix(playfield, {x: 0, y: 0}, context);
+    drawGhost(); 
     drawMatrix(player.matrix, player.pos, context);
 }
 
-function drawMatrix(matrix, offset, drawContext) {
+function drawMatrix(matrix, offset, drawContext, colorOverride = null) {
     if (!matrix) return;
     matrix.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value !== 0) {
-                drawContext.fillStyle = colors[value];
+                drawContext.fillStyle = colorOverride || colors[value];
                 drawContext.fillRect(x + offset.x, y + offset.y, 1, 1);
-                drawContext.strokeStyle = '#202028';
-                drawContext.lineWidth = 0.05;
-                drawContext.strokeRect(x + offset.x, y + offset.y, 1, 1);
+                if (!colorOverride) {
+                    drawContext.strokeStyle = '#202028';
+                    drawContext.lineWidth = 0.05;
+                    drawContext.strokeRect(x + offset.x, y + offset.y, 1, 1);
+                }
             }
         });
     });
@@ -125,61 +92,29 @@ function drawNextPiece() {
     nextPieceContext.fillStyle = '#000';
     nextPieceContext.fillRect(0, 0, nextPieceCanvas.width, nextPieceCanvas.height);
     if (nextPlayer.matrix) {
-        const offset = {
-            x: (PIECE_SIZE - nextPlayer.matrix.length) / 2,
-            y: (PIECE_SIZE - nextPlayer.matrix.length) / 2
-        };
+        const offset = { x: 1, y: 1 };
         drawMatrix(nextPlayer.matrix, offset, nextPieceContext);
     }
 }
 
-function merge(playfield, player) {
-    player.matrix.forEach((row, y) => {
-        row.forEach((value, x) => {
-            if (value !== 0) {
-                playfield[y + player.pos.y][x + player.pos.x] = value;
-            }
-        });
-    });
-    sounds.land.play();
-}
-
-function rotate(matrix, dir) {
-    for (let y = 0; y < matrix.length; y++) {
-        for (let x = 0; x < y; x++) {
-            [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
-        }
-    }
-    if (dir > 0) {
-        matrix.forEach(row => row.reverse());
+// --- UPGRADE: HOLD PIECE ---
+function playerHold() {
+    if (!canHold) return;
+    if (!holdPiece) {
+        holdPiece = { matrix: player.matrix, type: player.type };
+        playerReset();
     } else {
-        matrix.reverse();
+        const temp = { matrix: player.matrix, type: player.type };
+        player.matrix = holdPiece.matrix;
+        player.type = holdPiece.type;
+        holdPiece = temp;
+        player.pos.y = 0;
+        player.pos.x = Math.floor(BOARD_WIDTH / 2) - Math.floor(player.matrix.length / 2);
     }
-    sounds.rotate.play();
+    canHold = false;
 }
 
-function collide(playfield, player) {
-    const m = player.matrix;
-    const o = player.pos;
-    for (let y = 0; y < m.length; y++) {
-        for (let x = 0; x < m[y].length; x++) {
-            if (m[y][x] !== 0 &&
-                (playfield[y + o.y] && playfield[y + o.y][x + o.x]) !== 0) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-function playerMove(offset) {
-    player.pos.x += offset;
-    if (collide(playfield, player)) {
-        player.pos.x -= offset;
-    }
-    sounds.move.play();
-}
-
+// --- UPGRADE: SRS (Wall Kicks) ---
 function playerRotate(dir) {
     const pos = player.pos.x;
     let offset = 1;
@@ -195,6 +130,45 @@ function playerRotate(dir) {
     }
 }
 
+// --- UPGRADE: HARD DROP ---
+function playerHardDrop() {
+    while (!collide(playfield, player)) {
+        player.pos.y++;
+    }
+    player.pos.y--;
+    merge(playfield, player);
+    playerReset();
+    clearLines();
+}
+
+function rotate(matrix, dir) {
+    for (let y = 0; y < matrix.length; y++) {
+        for (let x = 0; x < y; x++) {
+            [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+        }
+    }
+    dir > 0 ? matrix.forEach(row => row.reverse()) : matrix.reverse();
+    sounds.rotate.play();
+}
+
+function collide(playfield, player) {
+    const [m, o] = [player.matrix, player.pos];
+    for (let y = 0; y < m.length; y++) {
+        for (let x = 0; x < m[y].length; x++) {
+            if (m[y][x] !== 0 && (playfield[y + o.y] && playfield[y + o.y][x + o.x]) !== 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function playerMove(offset) {
+    player.pos.x += offset;
+    if (collide(playfield, player)) player.pos.x -= offset;
+    else sounds.move.play();
+}
+
 function playerDrop() {
     player.pos.y++;
     if (collide(playfield, player)) {
@@ -202,15 +176,23 @@ function playerDrop() {
         merge(playfield, player);
         playerReset();
         clearLines();
-        if (gameOver) return;
     }
     dropCounter = 0;
+}
+
+function merge(playfield, player) {
+    player.matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value !== 0) playfield[y + player.pos.y][x + player.pos.x] = value;
+        });
+    });
+    sounds.land.play();
 }
 
 function clearLines() {
     let linesCleared = 0;
     for (let y = playfield.length - 1; y >= 0; --y) {
-        if (playfield[y].every(value => value !== 0)) {
+        if (playfield[y].every(v => v !== 0)) {
             linesCleared++;
             playfield.splice(y, 1);
             playfield.unshift(new Array(BOARD_WIDTH).fill(0));
@@ -218,92 +200,86 @@ function clearLines() {
         }
     }
     if (linesCleared > 0) {
-        const points = [, 100, 300, 500, 800];
-        score += points[linesCleared] || 0;
+        const points = [0, 100, 300, 500, 800];
+        score += points[linesCleared];
         scoreElement.innerText = score;
         sounds.clear.play();
     }
 }
 
 function playerReset() {
+    if (!nextPlayer.type) {
+        nextPlayer.type = getRandomPieceName();
+        nextPlayer.matrix = createPiece(nextPlayer.type);
+    }
+    
+    player.type = nextPlayer.type;
     player.matrix = nextPlayer.matrix;
     player.pos.y = 0;
-    player.pos.x = Math.floor(playfield.length / 2) - Math.floor(player.matrix.length / 2);
-    nextPlayer.matrix = createPiece(getRandomPieceName());
+    player.pos.x = Math.floor(BOARD_WIDTH / 2) - Math.floor(player.matrix.length / 2);
+    
+    nextPlayer.type = getRandomPieceName();
+    nextPlayer.matrix = createPiece(nextPlayer.type);
     drawNextPiece();
+    canHold = true;
 
     if (collide(playfield, player)) {
         gameOver = true;
-        cancelAnimationFrame(animationFrameId);
+        sounds.music.pause();
         sounds.gameover.play();
-        context.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        context.fillStyle = '#fff';
-        context.font = '1px Arial';
-        context.textAlign = 'center';
-        context.fillText('GAME OVER', canvas.width / 40, canvas.height / 40 + 5);
+        drawGameOver();
     }
 }
 
+function drawGameOver() {
+    context.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#fff';
+    context.font = '1px Arial';
+    context.textAlign = 'center';
+    context.fillText('GAME OVER', BOARD_WIDTH / 2, BOARD_HEIGHT / 2);
+}
+
 function getRandomPieceName() {
-    const pieces = 'IJLOSTZ';
-    return pieces[Math.floor(Math.random() * pieces.length)];
+    return 'IJLOSTZ'[Math.floor(Math.random() * 7)];
 }
 
 function createPiece(type) {
-    const matrix = tetrominos[type];
-    return matrix.map(row => [...row]);
+    return tetrominos[type].map(row => [...row]);
 }
-
-// --- GAME LOOP AND INPUT ---
 
 let dropCounter = 0;
 let dropInterval = 1000;
 let lastTime = 0;
 
 function update(time = 0) {
+    if (gameOver) return;
     const deltaTime = time - lastTime;
     lastTime = time;
-
     dropCounter += deltaTime;
-    if (dropCounter > dropInterval) {
-        playerDrop();
-    }
-
+    if (dropCounter > dropInterval) playerDrop();
     draw();
-    if (!gameOver) {
-        animationFrameId = requestAnimationFrame(update);
-    }
+    animationFrameId = requestAnimationFrame(update);
 }
 
 document.addEventListener('keydown', event => {
     if (gameOver) return;
-
-    if (event.keyCode === 37) { // Left arrow
-        playerMove(-1);
-    } else if (event.keyCode === 39) { // Right arrow
-        playerMove(1);
-    } else if (event.keyCode === 40) { // Down arrow (soft drop)
-        playerDrop();
-    } else if (event.keyCode === 38) { // Up arrow (rotate clockwise)
-        playerRotate(1);
-    } else if (event.keyCode === 90) { // Z key (rotate counter-clockwise)
-        playerRotate(-1);
-    }
+    if (event.keyCode === 37) playerMove(-1); // Left
+    if (event.keyCode === 39) playerMove(1);  // Right
+    if (event.keyCode === 40) playerDrop();    // Down
+    if (event.keyCode === 38) playerRotate(1); // Up (Rotate)
+    if (event.keyCode === 32) playerHardDrop(); // Space
+    if (event.keyCode === 67) playerHold();     // C (Hold)
 });
 
 startButton.addEventListener('click', () => {
-    if (gameOver) {
-        playfield.forEach(row => row.fill(0));
-        score = 0;
-        scoreElement.innerText = score;
-        gameOver = false;
-        dropInterval = 1000;
-    }
+    cancelAnimationFrame(animationFrameId);
+    playfield.forEach(row => row.fill(0));
+    score = 0;
+    scoreElement.innerText = score;
+    gameOver = false;
+    sounds.music.currentTime = 0;
+    sounds.music.play();
     playerReset();
     update();
 });
-
-// Initial next piece setup before the first game starts
-nextPlayer.matrix = createPiece(getRandomPieceName());
-drawNextPiece();
