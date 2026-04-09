@@ -76,46 +76,6 @@
         </div>
     </div>
 
-<script>
-    function drawMatrix(matrix, offset, ctx, colorOverride = null) {
-    if (!matrix) return;
-    matrix.forEach((row, y) => {
-        row.forEach((value, x) => {
-            if (value !== 0) {
-                const posX = x + offset.x;
-                const posY = y + offset.y;
-                const color = colorOverride || colors[value];
-
-                // Base color
-                ctx.fillStyle = color;
-                ctx.fillRect(posX, posY, 1, 1);
-
-                // Skip lighting for ghost piece (usually translucent)
-                if (colorOverride) return;
-
-                // 3D Bevel effect (scaled to 1x1 units)
-                ctx.lineWidth = 0.1;
-
-                // Light highlight (Top and Left)
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.beginPath();
-                ctx.moveTo(posX, posY + 1);
-                ctx.lineTo(posX, posY);
-                ctx.lineTo(posX + 1, posY);
-                ctx.stroke();
-
-                // Dark shadow (Bottom and Right)
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.beginPath();
-                ctx.moveTo(posX + 1, posY);
-                ctx.lineTo(posX + 1, posY + 1);
-                ctx.lineTo(posX, posY + 1);
-                ctx.stroke();
-            }
-        });
-    });
-}
-
-</script>
+<script src="tetris.js"></script>
 </body>
 </html>
