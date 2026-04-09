@@ -45,6 +45,7 @@
             font-size: 0.8em;
             color: #aaa;
         }
+        .label { margin-bottom: 5px; font-weight: bold; color: #4CAF50; }
     </style>
 </head>
 <body>
@@ -52,18 +53,25 @@
     <h1>Tetris</h1>
 
     <div id="game-container">
+        <div class="stats">
+            <div class="label">Hold (C):</div>
+            <canvas id="hold-piece" width="100" height="100"></canvas>
+            <p>High Score: <span id="high-score">0</span></p>
+        </div>
+
         <canvas id="tetris" width="240" height="400"></canvas>
         
         <div class="stats">
             <p>Score: <span id="score">0</span></p>
-            <p>Next:</p>
+            <div class="label">Next:</div>
             <canvas id="next-piece" width="100" height="100"></canvas>
             <br>
             <button id="start-button">Start Game</button>
             
             <div class="controls">
                 Arrows: Move/Rotate<br>
-                Space: Hard Drop
+                Space: Hard Drop<br>
+                C: Swap Piece
             </div>
         </div>
     </div>
@@ -73,19 +81,26 @@ const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-piece');
 const nextContext = nextCanvas.getContext('2d');
+const holdCanvas = document.getElementById('hold-piece');
+const holdContext = holdCanvas.getContext('2d');
+
 const scoreElement = document.getElementById('score');
+const highScoreElement = document.getElementById('high-score');
 const startButton = document.getElementById('start-button');
 
-// Scale for 20px blocks
 context.scale(20, 20);
 nextContext.scale(20, 20);
+holdContext.scale(20, 20);
 
-// Game State
 let score = 0;
+let highScore = localStorage.getItem('tetrisHighScore') || 0;
+highScoreElement.innerText = highScore;
+
 let dropInterval = 1000;
 let dropCounter = 0;
 let lastTime = 0;
 let gameOver = true;
+let canSwap = true;
 
 const colors = [
     null,
@@ -110,25 +125,23 @@ const player = {
     matrix: null,
 };
 
-const nextPiece = {
-    matrix: null,
-};
+const nextPiece = { matrix: null };
+const holdPiece = { matrix: null };
 
 function createPiece(type) {
     return tetrominos[type];
 }
 
 function draw() {
-    // Fill background
     context.fillStyle = '#000';
     context.fillRect(0, 0, canvas.width, canvas.height);
-
     drawMatrix(playfield, { x: 0, y: 0 }, context);
-    drawGhost(); // Draw shadow where it will land
+    drawGhost();
     drawMatrix(player.matrix, player.pos, context);
 }
 
 function drawMatrix(matrix, offset, ctx, colorOverride = null) {
+    if (!matrix) return;
     matrix.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value !== 0) {
@@ -141,11 +154,9 @@ function drawMatrix(matrix, offset, ctx, colorOverride = null) {
 
 function drawGhost() {
     let ghostY = player.pos.y;
-    // Find the lowest point possible
     while (!collide(playfield, { pos: { x: player.pos.x, y: ghostY + 1 }, matrix: player.matrix })) {
         ghostY++;
     }
-    // Draw in transparent white
     drawMatrix(player.matrix, { x: player.pos.x, y: ghostY }, context, 'rgba(255, 255, 255, 0.2)');
 }
 
@@ -192,6 +203,15 @@ function arenaSweep() {
         }
     }
     scoreElement.innerText = score;
+    updateHighScore();
+}
+
+function updateHighScore() {
+    if (score > highScore) {
+        highScore = score;
+        highScoreElement.innerText = highScore;
+        localStorage.setItem('tetrisHighScore', highScore);
+    }
 }
 
 function playerDrop() {
@@ -216,6 +236,7 @@ function playerReset() {
     player.pos.x = (playfield[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
     
     nextPiece.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+    canSwap = true;
     drawNext();
 
     if (collide(playfield, player)) {
@@ -225,22 +246,42 @@ function playerReset() {
     }
 }
 
+function playerHold() {
+    if (!canSwap) return;
+
+    if (!holdPiece.matrix) {
+        holdPiece.matrix = player.matrix;
+        playerReset();
+    } else {
+        const temp = player.matrix;
+        player.matrix = holdPiece.matrix;
+        holdPiece.matrix = temp;
+        player.pos.y = 0;
+        player.pos.x = (playfield[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+    }
+    
+    canSwap = false;
+    drawHold();
+}
+
 function drawNext() {
     nextContext.fillStyle = '#000';
     nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
     drawMatrix(nextPiece.matrix, { x: 1, y: 1 }, nextContext);
 }
 
+function drawHold() {
+    holdContext.fillStyle = '#000';
+    holdContext.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
+    drawMatrix(holdPiece.matrix, { x: 1, y: 1 }, holdContext);
+}
+
 function update(time = 0) {
     if (gameOver) return;
     const deltaTime = time - lastTime;
     lastTime = time;
-
     dropCounter += deltaTime;
-    if (dropCounter > dropInterval) {
-        playerDrop();
-    }
-
+    if (dropCounter > dropInterval) playerDrop();
     draw();
     requestAnimationFrame(update);
 }
@@ -264,19 +305,19 @@ document.addEventListener('keydown', event => {
             player.pos.x += offset;
             offset = -(offset + (offset > 0 ? 1 : -1));
             if (offset > player.matrix[0].length) {
-                rotate(player.matrix); rotate(player.matrix); rotate(player.matrix); // Undo
+                rotate(player.matrix); rotate(player.matrix); rotate(player.matrix);
                 player.pos.x = pos;
                 return;
             }
         }
     } else if (event.keyCode === 32) { // Space (Hard Drop)
-        while (!collide(playfield, player)) {
-            player.pos.y++;
-        }
+        while (!collide(playfield, player)) player.pos.y++;
         player.pos.y--;
         merge();
         playerReset();
         arenaSweep();
+    } else if (event.keyCode === 67) { // C (Swap/Hold)
+        playerHold();
     }
 });
 
@@ -284,6 +325,8 @@ startButton.onclick = () => {
     gameOver = false;
     score = 0;
     scoreElement.innerText = score;
+    holdPiece.matrix = null;
+    drawHold();
     playerReset();
     update();
 };
