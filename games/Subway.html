@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JS Subway Surfer Clone</title>
+    <style>
+        body { margin: 0; background: #222; overflow: hidden; font-family: sans-serif; }
+        #game-container { position: relative; width: 300px; height: 500px; margin: 50px auto; background: #555; border: 4px solid #fff; overflow: hidden; }
+        .lane { position: absolute; width: 100px; height: 100%; border-right: 1px dashed #777; }
+        #player { position: absolute; bottom: 20px; width: 60px; height: 80px; background: #ffcc00; border-radius: 10px; transition: left 0.1s ease; z-index: 10; }
+        .obstacle { position: absolute; width: 60px; height: 60px; background: #e74c3c; border-radius: 5px; }
+        #score { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score">Score: 0</div>
+        <div class="lane" style="left: 0;"></div>
+        <div class="lane" style="left: 100px;"></div>
+        <div class="lane" style="left: 200px;"></div>
+        <div id="player" style="left: 120px;"></div>
+    </div>
+
+<script>
+    const player = document.getElementById('player');
+    const container = document.getElementById('game-container');
+    const scoreElement = document.getElementById('score');
+    
+    let currentLane = 1; // 0: Left, 1: Middle, 2: Right
+    let score = 0;
+    let gameActive = true;
+    const lanePositions = [20, 120, 220]; // Player X positions for each lane
+
+    // Move player with Arrow Keys
+    document.addEventListener('keydown', (e) => {
+        if (!gameActive) return;
+        if (e.key === "ArrowLeft" && currentLane > 0) currentLane--;
+        if (e.key === "ArrowRight" && currentLane < 2) currentLane++;
+        player.style.left = lanePositions[currentLane] + 'px';
+    });
+
+    function createObstacle() {
+        if (!gameActive) return;
+        const obs = document.createElement('div');
+        obs.className = 'obstacle';
+        const lane = Math.floor(Math.random() * 3);
+        obs.style.left = lanePositions[lane] + 'px';
+        obs.style.top = '-60px';
+        container.appendChild(obs);
+
+        let top = -60;
+        const fall = setInterval(() => {
+            if (!gameActive) { clearInterval(fall); return; }
+            top += 5;
+            obs.style.top = top + 'px';
+
+            // Collision Detection
+            const pRect = player.getBoundingClientRect();
+            const oRect = obs.getBoundingClientRect();
+            if (pRect.left < oRect.right && pRect.right > oRect.left &&
+                pRect.top < oRect.bottom && pRect.bottom > oRect.top) {
+                gameActive = false;
+                alert("Game Over! Score: " + score);
+                location.reload();
+            }
+
+            if (top > 500) {
+                clearInterval(fall);
+                obs.remove();
+                score++;
+                scoreElement.innerText = "Score: " + score;
+            }
+        }, 20);
+    }
+
+    setInterval(createObstacle, 1500); // New obstacle every 1.5 seconds
+</script>
+</body>
+</html>
