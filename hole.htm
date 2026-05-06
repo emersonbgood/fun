@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Physics Hole</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; overflow: hidden; background: #333; font-family: sans-serif; touch-action: none; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; pointer-events: none; z-index: 10; }
+        #start-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; font-size: 20px; cursor: pointer; z-index: 100; border: none; border-radius: 10px; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    </style>
+    <!-- Corrected Library Paths -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+</head>
+<body>
+    <button id="start-btn">Click to Start Game</button>
+    <div id="ui"><h1>Score: <span id="score">0</span></h1></div>
+
+    <script>
+        const startBtn = document.getElementById('start-btn');
+        startBtn.onclick = () => {
+            startBtn.style.display = 'none';
+            initGame();
+        };
+
+        function initGame() {
+            // 1. Physics World Setup
+            const world = new CANNON.World();
+            world.gravity.set(0, -20, 0); // Higher gravity for snappier falling
+
+            // 2. Three.js Scene Setup
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // 3. Lighting
+            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+            sun.position.set(10, 20, 10);
+            sun.castShadow = true;
+            scene.add(sun);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+            // 4. Ground & Hole Visuals
+            const ground = new THREE.Mesh(
+                new THREE.PlaneGeometry(100, 100),
+                new THREE.MeshPhongMaterial({ color: 0x555555 })
+            );
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            let currentHoleRadius = 1.5;
+            const holeVis = new THREE.Mesh(
+                new THREE.RingGeometry(0, currentHoleRadius, 32),
+                new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide })
+            );
+            holeVis.rotation.x = -Math.PI / 2;
+            holeVis.position.y = 0.06; // Avoid Z-fighting with floor
+            scene.add(holeVis);
+
+            // 5. Destructible Cubes
+            const objects = [];
+            function spawnSmallBox(x, y, z, size) {
+                const shape = new CANNON.Box(new CANNON.Vec3(size/2, size/2, size/2));
+                const body = new CANNON.Body({ mass: 1, shape: shape });
+                body.position.set(x, y, z);
+                body.sleep(); // Efficiency: only calculate when moved
+                world.addBody(body);
+
+                const mesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(size, size, size),
+                    new THREE.MeshPhongMaterial({ color: `hsl(${Math.random()*360}, 70%, 60%)` })
+                );
+                mesh.castShadow = true;
+                scene.add(mesh);
+                objects.push({ body, mesh });
+            }
+
+            // Create some clusters
+            for(let i=0; i<15; i++) {
+                let ox = (Math.random()-0.5)*40;
+                let oz = (Math.random()-0.5)*40;
+                // Stack small blocks to form "buildings"
+                for(let h=0; h<3; h++) {
+                    spawnSmallBox(ox, h + 1, oz, 0.8);
+                }
+            }
+
+            // 6. Controls
+            const keys = {};
+            window.onkeydown = (e) => keys[e.code] = true;
+            window.onkeyup = (e) => keys[e.code] = false;
+
+            let score = 0;
+
+            function animate() {
+                requestAnimationFrame(animate);
+                world.step(1/60);
+
+                // Move Hole
+                const speed = 0.2;
+                if(keys['ArrowUp'] || keys['KeyW']) holeVis.position.z -= speed;
+                if(keys['ArrowDown'] || keys['KeyS']) holeVis.position.z += speed;
+                if(keys['ArrowLeft'] || keys['KeyA']) holeVis.position.x -= speed;
+                if(keys['ArrowRight'] || keys['KeyD']) holeVis.position.x += speed;
+
+                // Camera Follow
+                camera.position.set(holeVis.position.x, 15, holeVis.position.z + 12);
+                camera.lookAt(holeVis.position.x, 0, holeVis.position.z);
+
+                // Consumption Logic
+                objects.forEach((obj, idx) => {
+                    const dist = new THREE.Vector2(obj.body.position.x, obj.body.position.z)
+                                    .distanceTo(new THREE.Vector2(holeVis.position.x, holeVis.position.z));
+
+                    if (dist < currentHoleRadius) {
+                        obj.body.wakeUp();
+                        // Disable collision with ground so it falls through
+                        obj.body.collisionFilterMask = 0; 
+                        
+                        if (obj.body.position.y < -5) {
+                            scene.remove(obj.mesh);
+                            world.removeBody(obj.body);
+                            objects.splice(idx, 1);
+                            score += 10;
+                            document.getElementById('score').innerText = score;
+                            
+                            // Grow the hole slightly
+                            currentHoleRadius += 0.05;
+                            holeVis.scale.set(currentHoleRadius/1.5, currentHoleRadius/1.5, 1);
+                        }
+                    }
+                    obj.mesh.position.copy(obj.body.position);
+                    obj.mesh.quaternion.copy(obj.body.quaternion);
+                });
+
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+    </script>
+</body>
+</html>
