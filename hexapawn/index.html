@@ -296,7 +296,7 @@
                 <h2 id="viewTitle" style="margin:0; font-size:1.3rem;">AI Engine Brain Memory</h2>
                 <div class="toggle-container">
                     <span>Grid Mode</span>
-                    <input type="checkbox" id="viewModeToggle" checked style="cursor:pointer;">
+                    <input type="checkbox" id="viewModeToggle" style="cursor:pointer;">
                     <span>Tree Mode</span>
                 </div>
             </div>
@@ -318,7 +318,7 @@
         const State = {
             size: 3,
             theme: 'dark',
-            view: 'tree', 
+            view: 'grid', 
             board: [],
             selected: null,
             validMoves: [],
@@ -499,16 +499,17 @@
                 // ==========================================
         // FIXED TERMINAL LOGIC & SPATIAL CALCULATORS
         // ==========================================
+                // ==========================================
+        // FIXED STALEMATE & TURN WINNER LOGIC
+        // ==========================================
         function checkTerminal(board) {
             if (!board || board.length === 0) return null;
             
-            // FIX 1: Exact row-breakthrough checks (Row 0 is top, Row Size-1 is bottom)
-            // If a White pawn ('W') reaches the top row (0), White wins instantly!
-            if (board[0].includes('W')) return 'W';
-            // If a Black pawn ('B') reaches the bottom row, Black wins instantly!
+            // 1. Breakthrough condition: Reaching the end of the board
+            if (board.includes('W')) return 'W';
             if (board[board.length - 1].includes('B')) return 'B';
 
-            // Check if either team has been completely wiped out
+            // 2. Extinction condition: Capturing all enemy pieces
             let whiteCount = 0, blackCount = 0;
             for(let r=0; r<board.length; r++){
                 for(let c=0; c<board[r].length; c++){
@@ -519,12 +520,16 @@
             if (whiteCount === 0) return 'B';
             if (blackCount === 0) return 'W';
 
-            // Check immobilization: if it's a player's turn but they have no moves left, they lose!
+            // 3. FIX: Immobilization (Stalemate) condition
+            // If White has no moves on their turn, White loses -> Black wins!
             if (getAllLegalMoves(board, 'W').length === 0) return 'B';
+            
+            // If Black has no moves on their turn, Black loses -> White wins!
             if (getAllLegalMoves(board, 'B').length === 0) return 'W';
 
-            return null; // Game is still active
+            return null; // Game continues
         }
+
 
         function runAiEngineTurn() {
             if (State.gameOver) return;
