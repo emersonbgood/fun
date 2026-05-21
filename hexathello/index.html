@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8x8 Othello Matchbox Learning Engine</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1e1e1e;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+        .container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            max-width: 1200px;
+        }
+        .panel {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: 260px;
+            box-sizing: border-box;
+        }
+        .board {
+            width: 560px;
+            height: 560px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            background-color: #2e7d32;
+            border: 6px solid #1b5e20;
+            border-radius: 8px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.6);
+        }
+        .cell {
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+            position: relative;
+            cursor: pointer;
+        }
+        .cell.valid-move::before {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: rgba(255, 235, 59, 0.6);
+            z-index: 2;
+            box-shadow: 0 0 6px rgba(255, 235, 59, 0.4);
+        }
+        .piece {
+            width: 85%;
+            height: 85%;
+            position: relative;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .piece::before, .piece::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            backface-visibility: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+        }
+        .piece::before { background: radial-gradient(circle at 30% 30%, #444, #000); }
+        .piece::after { background: radial-gradient(circle at 30% 30%, #fff, #ccc); transform: rotateY(180deg); }
+        .piece.black { transform: rotateY(0deg); }
+        .piece.white { transform: rotateY(180deg); }
+        
+        button {
+            width: 100%;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background: #1b5e20; }
+        button.secondary { background: #444; }
+        button.secondary:hover { background: #555; }
+        
+        .stat-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 12px 0;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #3d3d3d;
+            padding-bottom: 4px;
+        }
+        .brain-log {
+            height: 150px;
+            background: #111;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            overflow-y: auto;
+            color: #4caf50;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <h2 style="margin: 0 0 5px 0;">⚡ Othello 8x8: Hexapawn Matchbox Engine</h2>
+    <p style="margin: 0 0 25px 0; color: #aaa;">Reinforcement machine learning running straight in your browser.</p>
+
+    <div class="container">
+        <!-- Human Dashboard Interactions -->
+        <div class="panel">
+            <h3 style="margin-top: 0; color: #4caf50;">Match Control</h3>
+            <div class="stat-line"><span>Turn Focus:</span><strong id="turn-txt">Black (You)</strong></div>
+            <div class="stat-line"><span>Black Tokens:</span><strong id="b-score">2</strong></div>
+            <div class="stat-line"><span>White AI Tokens:</span><strong id="w-score">2</strong></div>
+            <button onclick="resetGame()">Restart Match</button>
+            <button class="secondary" onclick="bulkTrain(2000)">Fast Train (2,000 runs)</button>
+            <button class="secondary" onclick="clearBrain()">Wipe AI Brain Cache</button>
+        </div>
+
+        <!-- 8x8 Interaction Grid Matrix -->
+        <div id="board" class="board"></div>
+
+        <!-- AI Decision Metrics Analytics Box -->
+        <div class="panel">
+            <h3 style="margin-top: 0; color: #2196f3;">Matchbox Analytics</h3>
+            <div class="stat-line"><span>Total Matches:</span><span id="total-games">0</span></div>
+            <div class="stat-line"><span>AI Win Velocity:</span><span id="win-rate">0%</span></div>
+            <div class="stat-line"><span>Unique Box States:</span><span id="brain-size">0</span></div>
+            <h4 style="margin: 15px 0 5px 0; font-size: 0.9rem;">Live Thinking Stream:</h4>
+            <div id="log" class="brain-log">System boot complete.<br/>> Awaiting initial move sequence...</div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const SIZE = 8;
+    const MAX_BRAIN_SIZE = 50000; // Keep browser memory consumption low
+    const boardEl = document.getElementById('board');
+    
+    let board = []; 
+    let currentPlayer = 'black'; // Black = Human user, White = Matchbox Learning AI
+    let gameHistory = []; // Logs [{ boardStateStr, chosenIndex }] mapping 
+    
+    let brain = {}; 
+    let gamesPlayed = 0;
+    let aiWins = 0;
+
+    const directions = [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]];
+
+    function initGame() {
+        board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
+        gameHistory = [];
+        currentPlayer = 'black';
+        
+        boardEl.innerHTML = '';
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = r * SIZE + c;
+                cell.onclick = () => handleHumanInteraction(r, c);
+                boardEl.appendChild(cell);
+            }
+        }
+        
+        // Classic Standard 8x8 Othello starting node positions
+        placePiece(3, 3, 'white');
+        placePiece(3, 4, 'black');
+        placePiece(4, 3, 'black');
+        placePiece(4, 4, 'white');
+        
+        updateGameDisplay();
+    }
+
+    function placePiece(r, c, color) {
+        board[r][c] = color;
+        const cell = boardEl.children[r * SIZE + c];
+        let piece = cell.querySelector('.piece');
+        if (!piece) {
+            piece = document.createElement('div');
+            cell.appendChild(piece);
+        }
+        piece.className = 'piece ' + color;
+    }
+
+    function getBoardString() {
+        return board.flat().map(v => v ? (v === 'black' ? 'B' : 'W') : '.').join('');
+    }
+
+    function getValidMoves(color) {
+        const moves = [];
+        const opponent = color === 'black' ? 'white' : 'black';
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (board[r][c]) continue;
+                
+                let isValid = false;
+                let piecesToFlip = [];
+
+                directions.forEach(([dr, dc]) => {
+                    let nr = r + dr, nc = c + dc;
+                    let tempFlips = [];
+                    while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === opponent) {
+                        tempFlips.push({r: nr, c: nc});
+                        nr += dr; nc += dc;
+                    }
+                    if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === color && tempFlips.length > 0) {
+                        isValid = true;
+                        piecesToFlip = piecesToFlip.concat(tempFlips);
+                    }
+                });
+
+                if (isValid) {
+                    moves.push({ r, c, idx: r * SIZE + c, flips: piecesToFlip });
+                }
+            }
+        }
+        return moves;
+    }
+
+    function executeMove(move, color) {
+        placePiece(move.r, move.c, color);
+        move.flips.forEach(pos => placePiece(pos.r, pos.c, color));
+    }
+
+    function handleHumanInteraction(r, c) {
+        if (currentPlayer !== 'black') return;
+        
+        const validMoves = getValidMoves('black');
+        const match = validMoves.find(m => m.r === r && m.c === c);
+        
+        if (!match) return;
+
+        executeMove(match, 'black');
+        currentPlayer = 'white';
+        updateGameDisplay();
+        
+        // Execute smooth visual step pause processing
+        setTimeout(processAIMatchboxTurn, 400);
+    }
+
+    function processAIMatchboxTurn() {
+        if (evaluateEndGameState()) return;
+
+        const validMoves = getValidMoves('white');
+        
+        if (validMoves.length === 0) {
+            logStream("AI pass step executed (No legal moves).");
+            currentPlayer = 'black';
+            updateGameDisplay();
+            if (getValidMoves('black').length === 0) evaluateEndGameState(true);
+            return;
+        }
+
+        const stateStr = getBoardString();
+        
+        // Matchbox Optimization Memory Layer
+        if (!brain[stateStr]) {
+            // Memory protection check routine to prevent browser bloat
+            if (Object.keys(brain).length > MAX_BRAIN_SIZE) {
+                brain = {}; // Perform dynamic full garbage cache refresh
+            }
+            brain[stateStr] = Array(SIZE * SIZE).fill(0);
+            validMoves.forEach(m => { brain[stateStr][m.idx] = 10; }); // Seed with 10 matchbox weight beads
+        }
+
+        const weights = brain[stateStr];
+        let runningSumWeight = 0;
+        validMoves.forEach(m => { runningSumWeight += weights[m.idx]; });
+
+        let finalSelectedMove = null;
+        if (runningSumWeight === 0) {
+            finalSelectedMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+        } else {
+            let choiceThreshold = Math.random() * runningSumWeight;
+            let currentCursorSum = 0;
+            for (let i = 0; i < validMoves.length; i++) {
+                currentCursorSum += weights[validMoves[i].idx];
+                if (choiceThreshold <= currentCursorSum) {
+                    finalSelectedMove = validMoves[i];
+                    break;
+                }
+            }
+        }
+
+        gameHistory.push({ state: stateStr, moveIdx: finalSelectedMove.idx });
+        executeMove(finalSelectedMove, 'white');
+        
+        logStream(`AI drops matchbox bead on index grid position ${finalSelectedMove.idx}`);
+        currentPlayer = 'black';
+        updateGameDisplay();
+
+        if (getValidMoves('black').length === 0) {
+            setTimeout(() => {
+                if (!evaluateEndGameState()) {
+                    logStream("Player has no legal steps. Turn passed back to AI.");
+                    currentPlayer = 'white';
+                    updateGameDisplay();
+                    setTimeout(processAIMatchboxTurn, 400);
+                }
+            }, 400);
+        }
+    }
+
+    function evaluateEndGameState(forceCloseExecution = false) {
+        const bMovesLeft = getValidMoves('black').length;
+        const wMovesLeft = getValidMoves('white').length;
+        const flatMatrix = board.flat();
+        const saturated = !flatMatrix.includes(null);
+
+        if (forceCloseExecution || saturated || (bMovesLeft === 0 && wMovesLeft === 0)) {
+            let blackTallies = flatMatrix.filter(v => v === 'black').length;
+            let whiteTallies = flatMatrix.filter(v => v === 'white').length;
+            
+            gamesPlayed++;
+            
+            if (whiteTallies > blackTallies) {
+                aiWins++;
+                logStream(`End Game: AI Wins (${whiteTallies}-${blackTallies}). Rewarding move map path.`);
+                applyHexapawnRewardRule();
+            } else if (blackTallies > whiteTallies) {
+                logStream(`End Game: AI Loses (${whiteTallies}-${blackTallies}). Punishing bad choice.`);
+                applyHexapawnPunishmentRule();
+            } else {
+                logStream("End Game: Perfect Draw match balance reached.");
+            }
+            
+            document.getElementById('total-games').textContent = gamesPlayed;
+            document.getElementById('win-rate').textContent = Math.round((aiWins / gamesPlayed) * 100) + '%';
+            document.getElementById('brain-size').textContent = Object.keys(brain).length;
+            return true;
+        }
+        return false;
+    }
+
+    function applyHexapawnRewardRule() {
+        gameHistory.forEach(node => {
+            if (brain[node.state]) {
+                brain[node.state][node.moveIdx] += 3; // Step choice reinforced
+            }
+        });
+    }
+
+    function applyHexapawnPunishmentRule() {
+        if (gameHistory.length === 0) return;
+        const terminalMistake = gameHistory[gameHistory.length - 1];
+        if (brain[terminalMistake.state]) {
+            // Subtract choice beads from matchbox weight, floor bounds to 0
+            brain[terminalMistake.state][terminalMistake.moveIdx] = Math.max(0, brain[terminalMistake.state][terminalMistake.moveIdx] - 4);
+        }
+    }
+
+    function updateGameDisplay() {
+        let bCount = 0, wCount = 0;
+        const userValidMoveArray = (currentPlayer === 'black') ? getValidMoves('black') : [];
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                const cell = boardEl.children[r * SIZE + c];
+                cell.classList.remove('valid-move');
+                
+                if (board[r][c] === 'black') bCount++;
+                if (board[r][c] === 'white') wCount++;
+
+                if (userValidMoveArray.some(m => m.r === r && m.c === c)) {
+                    cell.classList.add('valid-move');
+                }
+            }
+        }
+
+        document.getElementById('b-score').textContent = bCount;
+        document.getElementById('w-score').textContent = wCount;
+        document.getElementById('turn-txt').textContent = currentPlayer === 'black' ? "Black (You)" : "White (AI Brain Computing...)";
+    }
+
+    function logStream(textString) {
+        const logger = document.getElementById('log');
+        logger.innerHTML += `<br/>> ${textString}`;
+        logger.scrollTop = logger.scrollHeight;
+    }
+
+    // High-Performance Engine Self-Play simulation loop
+    window.bulkTrain = function(cycles) {
+        logStream(`Running algorithmic optimization execution for ${cycles} matches...`);
+        
+        for (let idx = 0; idx < cycles; idx++) {
+            // Flat board state assignment setup array maps for blazing hyper-speed compute loops
+            board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
+            board[3][3] = 'white'; board[3][4] = 'black';
+            board[4][3] = 'black'; board[4][4] = 'white';
+            
+            let turnFlag = 'black';
+            let localSimHistory = [];
+            let sessionRunning = true;
+
+            while (sessionRunning) {
+                let moves = getValidMoves(turnFlag);
+                if (moves.length === 0) {
+                    turnFlag = turnFlag === 'black' ? 'white' : 'black';
+                    moves = getValidMoves(turnFlag);
+                    if (moves.length === 0) break; 
+                }
+
+                if (turnFlag === 'white') {
+                    const signature = getBoardString();
+                    if (!brain[signature]) {
+                        if (Object.keys(brain).length > MAX_BRAIN_SIZE) brain = {};
+                        brain[signature] = Array(SIZE * SIZE).fill(0);
+                        moves.forEach(m => { brain[signature][m.idx] = 10; });
+                    }
+                    
+                    const weights = brain[signature];
+                    let totalWeight = 0;
+                    moves.forEach(m => { totalWeight += weights[m.idx]; });
+
+                    let chosenSelection = moves[Math.floor(Math.random() * moves.length)];
+                    if (totalWeight > 0) {
+                        let cutoff = Math.random() * totalWeight;
+                        let ongoingWeightAccumulation = 0;
+                        for (let k = 0; k < moves.length; k++) {
+                            ongoingWeightAccumulation += weights[moves[k].idx];
+                            if (cutoff <= ongoingWeightAccumulation) { chosenSelection = moves[k]; break; }
+                        }
+                    }
+                    localSimHistory.push({ state: signature, moveIdx: chosenSelection.idx });
+                    executeMove(chosenSelection, 'white');
+                } else {
+                    // Challenger emulation module (simulates a standard competitive player space randomly)
+                    let randomTargetMove = moves[Math.floor(Math.random() * moves.length)];
+                    executeMove(randomTargetMove, 'black');
+                }
+
+                const flatRepresentation = board.flat();
+                if (!flatRepresentation.includes(null) || (getValidMoves('black').length === 0 && getValidMoves('white').length === 0)) {
+                    let totalBlackPoints = flatRepresentation.filter(v => v === 'black').length;
+                    let totalWhitePoints = flatRepresentation.filter(v => v === 'white').length;
+                    gamesPlayed++;
+                    
+                    if (totalWhitePoints > totalBlackPoints) {
+                        aiWins++;
+                        localSimHistory.forEach(s => { if(brain[s.state]) brain[s.state][s.moveIdx] += 3; });
+                    } else if (totalBlackPoints > totalWhitePoints) {
+                        if (localSimHistory.length > 0) {
+                            let lastMistakeAction = localSimHistory[localSimHistory.length - 1];
+                            if(brain[lastMistakeAction.state]) {
+                                brain[lastMistakeAction.state][lastMistakeAction.moveIdx] = Math.max(0, brain[lastMistakeAction.state][lastMistakeAction.moveIdx] - 4);
+                            }
+                        }
+                    }
+                    sessionRunning = false;
+                }
+                turnFlag = turnFlag === 'black' ? 'white' : 'black';
+            }
+        }
+        
+        document.getElementById('total-games').textContent = gamesPlayed;
+        document.getElementById('win-rate').textContent = Math.round((aiWins / gamesPlayed) * 100) + '%';
+        document.getElementById('brain-size').textContent = Object.keys(brain).length;
+        logStream(`Automated compilation complete. Brain matrix populated with ${Object.keys(brain).length} matchbox branches.`);
+        initGame();
+    };
+
+    window.clearBrain = function() {
+        brain = {};
+        gamesPlayed = 0;
+        aiWins = 0;
+        document.getElementById('total-games').textContent = 0;
+        document.getElementById('win-rate').textContent = '0%';
+        document.getElementById('brain-size').textContent = 0;
+        logStream("AI neural cache wiped completely empty.");
+        initGame();
+    };
+
+    window.resetGame = initGame;
+    initGame();
+});
+</script>
+</body>
+</html>
