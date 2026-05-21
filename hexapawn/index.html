@@ -496,12 +496,19 @@
         }
 
         // --- 2. GAME LOGIC ENGINE ---
+                // ==========================================
+        // FIXED TERMINAL LOGIC & SPATIAL CALCULATORS
+        // ==========================================
         function checkTerminal(board) {
             if (!board || board.length === 0) return null;
             
-            if (board.includes('W')) return 'W';
+            // FIX 1: Exact row-breakthrough checks (Row 0 is top, Row Size-1 is bottom)
+            // If a White pawn ('W') reaches the top row (0), White wins instantly!
+            if (board[0].includes('W')) return 'W';
+            // If a Black pawn ('B') reaches the bottom row, Black wins instantly!
             if (board[board.length - 1].includes('B')) return 'B';
 
+            // Check if either team has been completely wiped out
             let whiteCount = 0, blackCount = 0;
             for(let r=0; r<board.length; r++){
                 for(let c=0; c<board[r].length; c++){
@@ -512,10 +519,11 @@
             if (whiteCount === 0) return 'B';
             if (blackCount === 0) return 'W';
 
+            // Check immobilization: if it's a player's turn but they have no moves left, they lose!
             if (getAllLegalMoves(board, 'W').length === 0) return 'B';
             if (getAllLegalMoves(board, 'B').length === 0) return 'W';
 
-            return null;
+            return null; // Game is still active
         }
 
         function runAiEngineTurn() {
@@ -613,22 +621,22 @@
             return node;
         }
 
-        function calculateCoordinateSchema(node, depth, xStart, xRange, records) {
+        // FIX 2: Dynamic canvas spacing variables so tree view branches spread out flat
+        function calculateCoordinateSchema(node, depth, layerLeftX, columnWidth, records) {
             if (!node) return null;
             
             let nodeIdx = records[depth] ? records[depth].length : 0;
             let id = `${node.key}-${depth}-${nodeIdx}`;
             
             if(!records[depth]) records[depth] = [];
+            let currentX = layerLeftX + (records[depth].length * columnWidth) + (columnWidth / 2);
             
-            let currentX = xStart + (xRange / 2);
-            let currentRecord = { id: id, key: node.key, x: currentX, y: depth * 160 + 40, itemRef: node, linkChildren: [] };
+            let currentRecord = { id: id, key: node.key, x: currentX, y: depth * 140 + 50, itemRef: node, linkChildren: [] };
             records[depth].push(currentRecord);
 
             if (node.children && node.children.length > 0) {
-                let segmentWidth = xRange / node.children.length;
-                node.children.forEach((ch, idx) => {
-                    let childId = calculateCoordinateSchema(ch.targetNode, depth + 1, xStart + (idx * segmentWidth), segmentWidth, records);
+                node.children.forEach(ch => {
+                    let childId = calculateCoordinateSchema(ch.targetNode, depth + 1, layerLeftX, columnWidth, records);
                     if(childId) {
                         currentRecord.linkChildren.push({ moveIdx: ch.moveIndex, id: childId });
                     }
@@ -636,8 +644,7 @@
             }
             return id;
         }
-
-        // --- 3. HIGH-RES GRAPHICS RENDERING SYSTEM ---
+// --- 3. HIGH-RES GRAPHICS RENDERING SYSTEM ---
         function createMiniSvgBoard(stateKey, drawArrows = false) {
             let rows = stateKey.split('-');
             let size = rows.length;
