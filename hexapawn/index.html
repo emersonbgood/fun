@@ -534,18 +534,23 @@
             return null; // Game continues safely
         }
 
+                // ==========================================
+        // FIXED: LIVE LEGAL-MOVE WEIGHING ENGINE
+        // ==========================================
         function runAiEngineTurn() {
             if (State.gameOver) return;
 
             let stateKey = stringifyBoard(State.board);
-            let options = getAllLegalMoves(State.board, 'B');
+            let options = getAllLegalMoves(State.board, 'B'); // Finds ALL correct moves dynamically
 
             if (options.length === 0) {
                 processMatchEnd('W');
                 return;
             }
 
-            if (!State.brain[stateKey]) {
+            // FIX: If this state is new or missing slots (like your BBB-W..-.WW card),
+            // dynamically create the correct number of bead slots matching the actual valid moves!
+            if (!State.brain[stateKey] || State.brain[stateKey].length !== options.length) {
                 State.brain[stateKey] = Array(options.length).fill(1);
             }
 
@@ -570,7 +575,7 @@
 
             renderGameLayout();
 
-            let result = checkTerminal(State.board);
+            let result = checkTerminal(State.board, 'W'); // Tells terminal it is White's turn next
             if (result) {
                 processMatchEnd(result);
             } else {
@@ -578,6 +583,7 @@
             }
             renderAiBrainGraphics();
         }
+
 
         function processMatchEnd(winner) {
             State.gameOver = true;
@@ -595,16 +601,20 @@
             renderAiBrainGraphics();
         }
 
+                // ==========================================
+        // FIXED: DYNAMIC GRAPH SCHEMAS
+        // ==========================================
         function deepBuildTreeSchema(currentBoard, turnPlayer, depth, maxDepth = 3) {
             if (depth > maxDepth) return null;
             let key = stringifyBoard(currentBoard);
             
-            let node = { key: key, winner: checkTerminal(currentBoard), children: [] };
+            let node = { key: key, winner: checkTerminal(currentBoard, turnPlayer), children: [] };
             if (node.winner) return node;
 
             if (turnPlayer === 'B') {
                 let options = getAllLegalMoves(currentBoard, 'B');
-                if (!State.brain[key]) {
+                // Dynamic safety sync
+                if (!State.brain[key] || State.brain[key].length !== options.length) {
                     State.brain[key] = Array(options.length).fill(1);
                 }
                 options.forEach((mv, index) => {
@@ -628,6 +638,7 @@
             }
             return node;
         }
+
 
         // FIX 2: Dynamic canvas spacing variables so tree view branches spread out flat
         function calculateCoordinateSchema(node, depth, layerLeftX, columnWidth, records) {
