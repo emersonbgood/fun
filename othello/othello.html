@@ -4,7 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Othello - 3D Flip</title>
-    <link rel="stylesheet" href="othello.css">
+    <style>body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #222;
+    margin: 0;
+}
+
+.board {
+    width: 600px;
+    height: 600px;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    background-color: #2e7d32;
+    border: 5px solid #1b5e20;
+}
+
+.cell {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1000px; /* Gives 3D depth to the flip */
+}
+
+.piece {
+    width: 85%;
+    height: 85%;
+    position: relative;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d; /* Allows 3D faces to exist */
+}
+
+/* Common face styles */
+.piece::before, .piece::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    backface-visibility: hidden; /* Hides the "under" side while flipping */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+/* Black side (Front) */
+.piece::before {
+    background: radial-gradient(circle at 30% 30%, #444, #000);
+}
+
+/* White side (Back) */
+.piece::after {
+    background: radial-gradient(circle at 30% 30%, #fff, #ccc);
+    transform: rotateY(180deg); /* Start the white side "facing away" */
+}
+
+/* Flip Animations triggered by classes */
+.piece.black { transform: rotateY(0deg); }
+.piece.white { transform: rotateY(180deg); }
+</style>
 </head>
 <body>
     <div id="board" class="board"></div>
