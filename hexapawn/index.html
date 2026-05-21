@@ -502,11 +502,14 @@
                 // ==========================================
         // FIXED STALEMATE & TURN WINNER LOGIC
         // ==========================================
-        function checkTerminal(board) {
+        // ==========================================
+        // CORRECTED TURN-AWARE TERMINAL CALIBRATOR
+        // ==========================================
+        function checkTerminal(board, currentTurn = 'W') {
             if (!board || board.length === 0) return null;
             
-            // 1. Breakthrough condition: Reaching the end of the board
-            if (board.includes('W')) return 'W';
+            // 1. Breakthrough condition: Check this FIRST. Reaching the end line is an instant win!
+            if (board[0].includes('W')) return 'W';
             if (board[board.length - 1].includes('B')) return 'B';
 
             // 2. Extinction condition: Capturing all enemy pieces
@@ -520,16 +523,16 @@
             if (whiteCount === 0) return 'B';
             if (blackCount === 0) return 'W';
 
-            // 3. FIX: Immobilization (Stalemate) condition
-            // If White has no moves on their turn, White loses -> Black wins!
-            if (getAllLegalMoves(board, 'W').length === 0) return 'B';
-            
-            // If Black has no moves on their turn, Black loses -> White wins!
-            if (getAllLegalMoves(board, 'B').length === 0) return 'W';
+            // 3. FIX: Only check for a stalemate immobilization if it is actually that player's turn!
+            if (currentTurn === 'W' && getAllLegalMoves(board, 'W').length === 0) {
+                return 'B'; // White is stuck on their turn -> Black wins
+            }
+            if (currentTurn === 'B' && getAllLegalMoves(board, 'B').length === 0) {
+                return 'W'; // Black is stuck on their turn -> White wins
+            }
 
-            return null; // Game continues
+            return null; // Game continues safely
         }
-
 
         function runAiEngineTurn() {
             if (State.gameOver) return;
@@ -768,7 +771,7 @@
                 State.validMoves = [];
                 renderGameLayout();
 
-                let term = checkTerminal(State.board);
+                let term = checkTerminal(State.board, 'B'); // Check if AI is stuck or you won
                 if (term) {
                     processMatchEnd(term);
                 } else {
