@@ -314,7 +314,6 @@
     </div>
 
     <script>
-        // --- 1. CONFIGURATION AND INITIAL STATE ---
         const State = {
             size: 3,
             theme: 'dark',
@@ -406,13 +405,11 @@
             State.gameOver = false;
             State.history = [];
         }
-        // --- FEATURE: TRAINING LAB AUTO-MATCH SIMULATOR ---
         function runAutoTrainingLab(matchCount = 50) {
             let initialBoardBackup = deepCopyBoard(State.board);
             let gamesSimulated = 0;
 
             for (let i = 0; i < matchCount; i++) {
-                // Initialize a clean test match state
                 let tempBoard = [];
                 for (let r = 0; r < State.size; r++) {
                     let row = [];
@@ -423,16 +420,13 @@
                     }
                     tempBoard.push(row);
                 }
-
-                let currentTurn = 'W'; // White player always takes initialization move
+                let currentTurn = 'W';
                 let tempHistory = [];
                 let matchActive = true;
-
                 while (matchActive) {
                     let termResult = checkTerminal(tempBoard);
                     if (termResult) {
                         if (termResult === 'W' && tempHistory.length > 0) {
-                            // If White wins, punish the AI's last recorded decision path
                             let lastAction = tempHistory[tempHistory.length - 1];
                             if (State.brain[lastAction.key]) {
                                 State.brain[lastAction.key][lastAction.moveIdx] = 0;
@@ -441,14 +435,12 @@
                         matchActive = false;
                         break;
                     }
-
                     if (currentTurn === 'W') {
                         let wOptions = getAllLegalMoves(tempBoard, 'W');
                         if (wOptions.length === 0) {
                             matchActive = false;
                             break;
                         }
-                        // Simulate random moves for White player baseline
                         let randomWMove = wOptions[Math.floor(Math.random() * wOptions.length)];
                         tempBoard[randomWMove.to.r][randomWMove.to.c] = 'W';
                         tempBoard[randomWMove.from.r][randomWMove.from.c] = '.';
@@ -456,17 +448,14 @@
                     } else {
                         let bOptions = getAllLegalMoves(tempBoard, 'B');
                         let stateKey = tempBoard.map(r => r.join('')).join('-');
-
                         if (!State.brain[stateKey]) {
                             State.brain[stateKey] = Array(bOptions.length).fill(1);
                         }
-
                         let weights = State.brain[stateKey];
                         let activeIndices = [];
                         weights.forEach((w, idx) => { if (w === 1 && idx < bOptions.length) activeIndices.push(idx); });
 
                         if (activeIndices.length === 0) {
-                            // No moves left for AI, treat as White win and punish last step
                             if (tempHistory.length > 0) {
                                 let lastAction = tempHistory[tempHistory.length - 1];
                                 if (State.brain[lastAction.key]) State.brain[lastAction.key][lastAction.moveIdx] = 0;
@@ -474,12 +463,9 @@
                             matchActive = false;
                             break;
                         }
-
                         let choiceIdx = activeIndices[Math.floor(Math.random() * activeIndices.length)];
                         let chosenBMove = bOptions[choiceIdx];
-
                         tempHistory.push({ key: stateKey, moveIdx: choiceIdx });
-
                         tempBoard[chosenBMove.to.r][chosenBMove.to.c] = 'B';
                         tempBoard[chosenBMove.from.r][chosenBMove.from.c] = '.';
                         currentTurn = 'W';
@@ -487,32 +473,15 @@
                 }
                 gamesSimulated++;
             }
-
-            // Restore the original board layout, flash results, and refresh tree layout graphics
             State.board = initialBoardBackup;
             renderGameLayout();
             renderAiBrainGraphics();
             alert(`Training Complete! Simulated ${gamesSimulated} games behind the scenes. Check out your updated tree structure!`);
         }
-
-        // --- 2. GAME LOGIC ENGINE ---
-                // ==========================================
-        // FIXED TERMINAL LOGIC & SPATIAL CALCULATORS
-        // ==========================================
-                // ==========================================
-        // FIXED STALEMATE & TURN WINNER LOGIC
-        // ==========================================
-        // ==========================================
-        // CORRECTED TURN-AWARE TERMINAL CALIBRATOR
-        // ==========================================
         function checkTerminal(board, currentTurn = 'W') {
             if (!board || board.length === 0) return null;
-            
-            // 1. Breakthrough condition: Check this FIRST. Reaching the end line is an instant win!
             if (board[0].includes('W')) return 'W';
             if (board[board.length - 1].includes('B')) return 'B';
-
-            // 2. Extinction condition: Capturing all enemy pieces
             let whiteCount = 0, blackCount = 0;
             for(let r=0; r<board.length; r++){
                 for(let c=0; c<board[r].length; c++){
@@ -522,60 +491,39 @@
             }
             if (whiteCount === 0) return 'B';
             if (blackCount === 0) return 'W';
-
-            // 3. FIX: Only check for a stalemate immobilization if it is actually that player's turn!
             if (currentTurn === 'W' && getAllLegalMoves(board, 'W').length === 0) {
-                return 'B'; // White is stuck on their turn -> Black wins
             }
             if (currentTurn === 'B' && getAllLegalMoves(board, 'B').length === 0) {
-                return 'W'; // Black is stuck on their turn -> White wins
             }
-
-            return null; // Game continues safely
+            return null;
         }
-
-                // ==========================================
-        // FIXED: LIVE LEGAL-MOVE WEIGHING ENGINE
-        // ==========================================
         function runAiEngineTurn() {
             if (State.gameOver) return;
-
             let stateKey = stringifyBoard(State.board);
-            let options = getAllLegalMoves(State.board, 'B'); // Finds ALL correct moves dynamically
-
+            let options = getAllLegalMoves(State.board, 'B');
             if (options.length === 0) {
                 processMatchEnd('W');
                 return;
             }
-
-            // FIX: If this state is new or missing slots (like your BBB-W..-.WW card),
-            // dynamically create the correct number of bead slots matching the actual valid moves!
             if (!State.brain[stateKey] || State.brain[stateKey].length !== options.length) {
                 State.brain[stateKey] = Array(options.length).fill(1);
             }
-
             let weights = State.brain[stateKey];
             let activeIndices = [];
             weights.forEach((w, index) => {
                 if (w === 1 && index < options.length) activeIndices.push(index);
             });
-
             if (activeIndices.length === 0) {
                 processMatchEnd('W');
                 return;
             }
-
             let choiceIndex = activeIndices[Math.floor(Math.random() * activeIndices.length)];
             let chosenMove = options[choiceIndex];
-
             State.history.push({ key: stateKey, moveIdx: choiceIndex });
-
             State.board[chosenMove.to.r][chosenMove.to.c] = 'B';
             State.board[chosenMove.from.r][chosenMove.from.c] = '.';
-
             renderGameLayout();
-
-            let result = checkTerminal(State.board, 'W'); // Tells terminal it is White's turn next
+            let result = checkTerminal(State.board, 'W');
             if (result) {
                 processMatchEnd(result);
             } else {
@@ -583,8 +531,6 @@
             }
             renderAiBrainGraphics();
         }
-
-
         function processMatchEnd(winner) {
             State.gameOver = true;
             if (winner === 'W') {
@@ -600,20 +546,13 @@
             }
             renderAiBrainGraphics();
         }
-
-                // ==========================================
-        // FIXED: DYNAMIC GRAPH SCHEMAS
-        // ==========================================
         function deepBuildTreeSchema(currentBoard, turnPlayer, depth, maxDepth = 3) {
             if (depth > maxDepth) return null;
             let key = stringifyBoard(currentBoard);
-            
             let node = { key: key, winner: checkTerminal(currentBoard, turnPlayer), children: [] };
             if (node.winner) return node;
-
             if (turnPlayer === 'B') {
                 let options = getAllLegalMoves(currentBoard, 'B');
-                // Dynamic safety sync
                 if (!State.brain[key] || State.brain[key].length !== options.length) {
                     State.brain[key] = Array(options.length).fill(1);
                 }
@@ -621,7 +560,6 @@
                     let nextB = deepCopyBoard(currentBoard);
                     nextB[mv.to.r][mv.to.c] = 'B';
                     nextB[mv.from.r][mv.from.c] = '.';
-                    
                     let childNode = deepBuildTreeSchema(nextB, 'W', depth + 1, maxDepth);
                     if(childNode) node.children.push({ moveIndex: index, targetNode: childNode });
                 });
@@ -631,60 +569,56 @@
                     let nextB = deepCopyBoard(currentBoard);
                     nextB[mv.to.r][mv.to.c] = 'W';
                     nextB[mv.from.r][mv.from.c] = '.';
-                    
                     let childNode = deepBuildTreeSchema(nextB, 'B', depth + 1, maxDepth);
                     if(childNode) node.children.push({ moveIndex: -1, targetNode: childNode });
                 });
             }
             return node;
         }
-
-
-        // FIX 2: Dynamic canvas spacing variables so tree view branches spread out flat
         function calculateCoordinateSchema(node, depth, layerLeftX, columnWidth, records) {
-            if (!node) return null;
-            
-            let nodeIdx = records[depth] ? records[depth].length : 0;
-            let id = `${node.key}-${depth}-${nodeIdx}`;
-            
-            if(!records[depth]) records[depth] = [];
-            let currentX = layerLeftX + (records[depth].length * columnWidth) + (columnWidth / 2);
-            
-            let currentRecord = { id: id, key: node.key, x: currentX, y: depth * 140 + 50, itemRef: node, linkChildren: [] };
-            records[depth].push(currentRecord);
+  if (!node) return null;
+  if (!records[depth]) records[depth] = [];
+  
+  let nodeIdx = records[depth].length;
+  let id = `${node.key}-${depth}-${nodeIdx}`;
+  
+  // Calculate X based on parent's bounding box slice
+  let currentX = layerLeftX + (nodeIdx * (columnWidth / (records[depth].length + 1)));
+  
+  let currentRecord = { id: id, key: node.key, x: currentX, y: depth * 140 + 50, itemRef: node, linkChildren: [] };
+  records[depth].push(currentRecord);
+  
+  if (node.children && node.children.length > 0) {
+    let childWidth = columnWidth / node.children.length; // Divide the space
+    node.children.forEach((ch, idx) => {
+      let childLeftX = layerLeftX + (idx * childWidth);
+      let childId = calculateCoordinateSchema(ch.targetNode, depth + 1, childLeftX, childWidth, records);
+      if(childId) {
+        currentRecord.linkChildren.push({ moveIdx: ch.moveIndex, id: childId });
+      }
+    });
+  }
+  return id;
+}
 
-            if (node.children && node.children.length > 0) {
-                node.children.forEach(ch => {
-                    let childId = calculateCoordinateSchema(ch.targetNode, depth + 1, layerLeftX, columnWidth, records);
-                    if(childId) {
-                        currentRecord.linkChildren.push({ moveIdx: ch.moveIndex, id: childId });
-                    }
-                });
-            }
-            return id;
-        }
-// --- 3. HIGH-RES GRAPHICS RENDERING SYSTEM ---
         function createMiniSvgBoard(stateKey, drawArrows = false) {
             let rows = stateKey.split('-');
             let size = rows.length;
             let boxSize = 120; 
             let step = boxSize / size;
             let boardHtml = '';
-
             for (let r = 0; r < size; r++) {
                 for (let c = 0; c < size; c++) {
                     let fill = (r + c) % 2 === 0 ? '#45475a' : '#313244';
                     boardHtml += `<rect x="${c * step}" y="${r * step}" width="${step}" height="${step}" fill="${fill}" stroke="#11111b" stroke-width="0.5"/>`;
                 }
             }
-
             for (let r = 0; r < size; r++) {
                 for (let c = 0; c < size; c++) {
                     let char = rows[r][c];
                     let cx = c * step + (step / 2);
                     let cy = r * step + (step / 2);
                     let radius = step * 0.35;
-
                     if (char === 'B') {
                         boardHtml += `
                             <circle cx="${cx}" cy="${cy}" r="${radius}" fill="url(#bBead)" stroke="#11111b" stroke-width="1"/>
@@ -696,7 +630,6 @@
                     }
                 }
             }
-
             if (drawArrows && State.brain[stateKey]) {
                 let options = getAllLegalMoves(rows.map(r => r.split('')), 'B');
                 let weights = State.brain[stateKey];
@@ -705,20 +638,16 @@
                     let isAlive = weights[idx] === 1;
                     let color = isAlive ? 'var(--accent-green)' : 'var(--accent-red)';
                     let markerId = isAlive ? 'url(#arrG)' : 'url(#arrR)';
-                    
                     let x1 = mv.from.c * step + (step / 2);
                     let y1 = mv.from.r * step + (step / 2);
                     let x2 = mv.to.c * step + (step / 2);
                     let y2 = mv.to.r * step + (step / 2);
-                    
                     let dx = x2 - x1, dy = y2 - y1;
                     let len = Math.sqrt(dx*dx + dy*dy);
                     if(len > 0) { x2 = x1 + (dx/len)*(len - 12); y2 = y1 + (dy/len)*(len - 12); }
-
                     boardHtml += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="3" marker-end="${markerId}" stroke-dasharray="${isAlive ? '0' : '3,3'}"/>`;
                 });
             }
-
             return `
                 <defs>
                     <radialGradient id="bBead" cx="30%" cy="30%" r="70%">
@@ -733,25 +662,20 @@
                 ${boardHtml}
             `;
         }
-
         function renderGameLayout() {
             const container = document.getElementById('gameBoard');
             if(!container) return;
             container.innerHTML = '';
-            
             container.style.display = 'grid';
             container.style.gridTemplateColumns = `repeat(${State.size}, 1fr)`;
             container.style.gridTemplateRows = `repeat(${State.size}, 1fr)`;
-            
             let cellSize = State.size > 4 ? (State.size > 5 ? 50 : 65) : 80;
             container.style.width = `${cellSize * State.size}px`;
             container.style.height = `${cellSize * State.size}px`;
-
             for (let r = 0; r < State.size; r++) {
                 for (let c = 0; c < State.size; c++) {
                     const cell = document.createElement('div');
                     cell.className = `cell ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
-                    
                     let piece = State.board[r][c];
                     if (piece !== '.') {
                         const pawn = document.createElement('div');
@@ -762,16 +686,13 @@
                         pawn.innerText = piece === 'W' ? '♙' : '♟';
                         cell.appendChild(pawn);
                     }
-
                     if (State.selected && State.selected.r === r && State.selected.c === c) cell.classList.add('selected');
                     if (State.validMoves.some(m => m.to.r === r && m.to.c === c)) cell.classList.add('valid-move');
-
                     cell.onclick = () => handleInputInteraction(r, c);
                     container.appendChild(cell);
                 }
             }
         }
-
         function handleInputInteraction(r, c) {
             if (State.gameOver) return;
             let targetMove = State.validMoves.find(m => m.to.r === r && m.to.c === c);
@@ -781,8 +702,7 @@
                 State.selected = null;
                 State.validMoves = [];
                 renderGameLayout();
-
-                let term = checkTerminal(State.board, 'B'); // Check if AI is stuck or you won
+                let term = checkTerminal(State.board, 'B');
                 if (term) {
                     processMatchEnd(term);
                 } else {
@@ -797,36 +717,25 @@
                 renderGameLayout();
             }
         }
-
-                // --- 3. RENDERING LOGIC AND BINDINGS ENGINE (TOGGLE SWAP FIXED) ---
-                // --- 3. CORRECTION: RENDERING LOGIC & ENHANCED MATRIX HANDLERS ---
         function renderAiBrainGraphics() {
             const container = document.getElementById('viewContainer');
             if(!container) return;
             container.innerHTML = '';
-
             let activeKey = stringifyBoard(State.board);
-
-            // FIXED: Sync view toggle string variables explicitly 
             if (State.view === 'grid') {
                 let gridWrapper = document.createElement('div');
                 gridWrapper.className = 'matchbox-grid';
-
                 Object.keys(State.brain).forEach(key => {
                     let box = document.createElement('div');
                     box.className = `matchbox ${key === activeKey ? 'active' : ''}`;
                     box.onclick = () => openInspectCard(key);
-                    
                     let title = document.createElement('div');
                     title.className = 'matchbox-title';
                     title.innerText = key.substring(0, 11);
-
                     let weights = State.brain[key];
                     let totalPaths = weights.length;
                     let activePaths = weights.filter(w => w === 1).length;
-
                     let svgStr = `<svg width="50" height="50" style="display:block; margin:0 auto; border-radius:4px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"><g transform="scale(0.416)">${createMiniSvgBoard(key)}</g></svg>`;
-                    
                     let footerStr = `
                         <div class="matchbox-footer">
                             <div style="font-weight:bold; margin-bottom:3px; color:#cdd6f4;">Beads: ${activePaths}/${totalPaths}</div>
@@ -836,7 +745,6 @@
                         footerStr += `<span style="color:${w === 1 ? 'var(--accent-green)' : 'var(--accent-red)'}; font-size:1.1rem;">•</span>`;
                     });
                     footerStr += `</div></div>`;
-
                     box.appendChild(title);
                     box.innerHTML += svgStr;
                     box.innerHTML += footerStr;
@@ -846,17 +754,11 @@
             } else {
                 let rootNode = deepBuildTreeSchema(State.board, 'B', 0, 3);
                 let layers = {};
-                
-                // Forces proportional horizontal layout distribution across 1400px canvas boundaries
                 calculateCoordinateSchema(rootNode, 0, 10, 1400, layers);
-
                 let svgElement = document.createElementNS("http://w3.org", "svg");
                 svgElement.setAttribute('class', 'svgBox');
-
                 let flatNodes = [];
                 Object.keys(layers).forEach(lyr => flatNodes.push(...layers[lyr]));
-
-                // Clear layout overlaps and re-render connecting tree branches
                 flatNodes.forEach(nodeRecord => {
                     nodeRecord.linkChildren.forEach(link => {
                         let targetNode = flatNodes.find(fn => fn.id === link.id);
@@ -875,27 +777,22 @@
                         }
                     });
                 });
-
                 flatNodes.forEach(nodeRecord => {
                     let gWrapper = document.createElementNS("http://w3.org", "g");
                     gWrapper.setAttribute("class", "tree-node-wrapper");
                     gWrapper.onclick = () => openInspectCard(nodeRecord.key);
-
                     let foreignObject = document.createElementNS("http://w3.org", "foreignObject");
                     foreignObject.setAttribute("x", nodeRecord.x);
                     foreignObject.setAttribute("y", nodeRecord.y);
                     foreignObject.setAttribute("width", "50");
                     foreignObject.setAttribute("height", "50");
-
                     let divNodeWrapper = document.createElement('div');
                     divNodeWrapper.style.width = "50px"; divNodeWrapper.style.height = "50px";
-                    
                     if(nodeRecord.key === activeKey) {
                         divNodeWrapper.style.outline = "3px solid #f9e2af";
                         divNodeWrapper.style.outlineOffset = "2px";
                         divNodeWrapper.style.borderRadius = "4px";
                     }
-
                     divNodeWrapper.innerHTML = `<svg width="50" height="50"><g transform="scale(0.416)">${createMiniSvgBoard(nodeRecord.key)}</g></svg>`;
                     foreignObject.appendChild(divNodeWrapper);
                     gWrapper.appendChild(foreignObject);
@@ -905,22 +802,17 @@
                 container.appendChild(svgElement);
             }
         }
-
-        // --- 4. POPUP OVERLAY ACTION TRIGGERS ---
         function openInspectCard(stateKey) {
             let overlay = document.getElementById('inspectOverlay');
             let title = document.getElementById('inspectTitle');
             let container = document.getElementById('inspectSvgContainer');
             let details = document.getElementById('inspectDetails');
             if(!overlay || !container) return;
-
             title.innerText = `NODE: ${stateKey.substring(0,11)}`;
             container.innerHTML = `<svg width="120" height="120" style="border-radius:6px; box-shadow:0 4px 10px rgba(0,0,0,0.4);">${createMiniSvgBoard(stateKey, true)}</svg>`;
-            
             let weights = State.brain[stateKey] || [];
             let total = weights.length;
             let active = weights.filter(w => w === 1).length;
-            
             details.innerHTML = `
                 <div style="color:var(--text-color); font-weight:bold; margin-bottom:8px;">Active Path Vectors: ${active} / ${total}</div>
                 <p style="font-size:0.8rem; margin:0; color:var(--text-muted);">
@@ -929,22 +821,17 @@
             `;
             overlay.classList.add('show');
         }
-
         function closeInspectCard() {
             let overlay = document.getElementById('inspectOverlay');
             if(overlay) overlay.classList.remove('show');
         }
-
-        // --- 5. INITIALIZATION HOOKS & CONTROLS ---
         document.getElementById('settingsToggle').onclick = (e) => {
             e.stopPropagation();
             document.getElementById('settingsMenu').classList.toggle('show');
         };
-
         document.body.onclick = () => {
             document.getElementById('settingsMenu').classList.remove('show');
         };
-
         document.getElementById('settingsMenu').onclick = (e) => e.stopPropagation();
 
         document.getElementById('gridSize').onchange = (e) => {
@@ -952,39 +839,31 @@
             initBrainCore();
             resetCurrentMatch();
         };
-
         document.getElementById('themeSelect').onchange = (e) => {
             State.theme = e.target.value;
             document.documentElement.setAttribute('data-theme', State.theme);
         };
-
         document.getElementById('viewModeToggle').onchange = (e) => {
             State.view = e.target.checked ? 'tree' : 'grid';
             renderAiBrainGraphics();
         };
-
         document.getElementById('resetAiBtn').onclick = () => {
             initBrainCore();
             alert("AI Memory Reset Successfully!");
             resetCurrentMatch();
         };
-
         document.getElementById('trainLabBtn').onclick = () => {
             runAutoTrainingLab(50);
         };
-
         document.getElementById('resetGameBtn').onclick = () => {
             resetCurrentMatch();
         };
-
         function resetCurrentMatch() {
             initBoardData();
             document.getElementById('statusText').innerText = "Your turn! Select a White pawn.";
             renderGameLayout();
             renderAiBrainGraphics();
         }
-
-        // Launch Application Engines
         initBrainCore();
         initBoardData();
         renderGameLayout();
