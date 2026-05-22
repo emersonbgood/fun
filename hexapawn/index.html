@@ -547,58 +547,69 @@
             renderAiBrainGraphics();
         }
         function deepBuildTreeSchema(currentBoard, turnPlayer, depth, maxDepth = 3) {
-            if (depth > maxDepth) return null;
-            let key = stringifyBoard(currentBoard);
-            let node = { key: key, winner: checkTerminal(currentBoard, turnPlayer), children: [] };
-            if (node.winner) return node;
-            if (turnPlayer === 'B') {
-                let options = getAllLegalMoves(currentBoard, 'B');
-                if (!State.brain[key] || State.brain[key].length !== options.length) {
-                    State.brain[key] = Array(options.length).fill(1);
-                }
-                options.forEach((mv, index) => {
-                    let nextB = deepCopyBoard(currentBoard);
-                    nextB[mv.to.r][mv.to.c] = 'B';
-                    nextB[mv.from.r][mv.from.c] = '.';
-                    let childNode = deepBuildTreeSchema(nextB, 'W', depth + 1, maxDepth);
-                    if(childNode) node.children.push({ moveIndex: index, targetNode: childNode });
-                });
-            } else {
-                let options = getAllLegalMoves(currentBoard, 'W');
-                options.forEach(mv => {
-                    let nextB = deepCopyBoard(currentBoard);
-                    nextB[mv.to.r][mv.to.c] = 'W';
-                    nextB[mv.from.r][mv.from.c] = '.';
-                    let childNode = deepBuildTreeSchema(nextB, 'B', depth + 1, maxDepth);
-                    if(childNode) node.children.push({ moveIndex: -1, targetNode: childNode });
-                });
-            }
-            return node;
-        }
-        function calculateCoordinateSchema(node, depth, layerLeftX, columnWidth, records) {
-  if (!node) return null;
-  if (!records[depth]) records[depth] = [];
-  
-  let nodeIdx = records[depth].length;
-  let id = `${node.key}-${depth}-${nodeIdx}`;
-  
-  // Calculate X based on parent's bounding box slice
-  let currentX = layerLeftX + (nodeIdx * (columnWidth / (records[depth].length + 1)));
-  
-  let currentRecord = { id: id, key: node.key, x: currentX, y: depth * 140 + 50, itemRef: node, linkChildren: [] };
-  records[depth].push(currentRecord);
-  
-  if (node.children && node.children.length > 0) {
-    let childWidth = columnWidth / node.children.length; // Divide the space
-    node.children.forEach((ch, idx) => {
-      let childLeftX = layerLeftX + (idx * childWidth);
-      let childId = calculateCoordinateSchema(ch.targetNode, depth + 1, childLeftX, childWidth, records);
-      if(childId) {
-        currentRecord.linkChildren.push({ moveIdx: ch.moveIndex, id: childId });
-      }
-    });
-  }
-  return id;
+ if (depth > maxDepth) return null;
+ let key = stringifyBoard(currentBoard);
+ let node = { key: key, winner: checkTerminal(currentBoard, turnPlayer), children: [] };
+ if (node.winner) return node;
+ 
+ if (turnPlayer === 'B') {
+   let options = getAllLegalMoves(currentBoard, 'B');
+   if (!State.brain[key] || State.brain[key].length !== options.length) {
+     State.brain[key] = Array(options.length).fill(1);
+   }
+   options.forEach((mv, index) => {
+     let nextB = deepCopyBoard(currentBoard);
+     nextB[mv.to.r][mv.to.c] = 'B';
+     nextB[mv.from.r][mv.from.c] = '.';
+     let childNode = deepBuildTreeSchema(nextB, 'W', depth + 1, maxDepth);
+     if(childNode) node.children.push({ moveIndex: index, targetNode: childNode });
+   });
+ } else {
+   let options = getAllLegalMoves(currentBoard, 'W');
+   options.forEach(mv => {
+     let nextB = deepCopyBoard(currentBoard);
+     nextB[mv.to.r][mv.to.c] = 'W';
+     nextB[mv.from.r][mv.from.c] = '.';
+     
+     // FIX: Stop evaluating further if this human move terminates the game
+     if (checkTerminal(nextB, 'B')) {
+       let terminalNode = { key: stringifyBoard(nextB), winner: checkTerminal(nextB, 'B'), children: [] };
+       node.children.push({ moveIndex: -1, targetNode: terminalNode });
+       return;
+     }
+
+     let childNode = deepBuildTreeSchema(nextB, 'B', depth + 1, maxDepth);
+     if(childNode) node.children.push({ moveIndex: -1, targetNode: childNode });
+   });
+ }
+ return node;
+}
+
+function calculateCoordinateSchema(node, depth, layerLeftX, columnWidth, records) {
+ if (!node) return null;
+ if (!records[depth]) records[depth] = [];
+ 
+ let nodeIdx = records[depth].length;
+ let id = `${node.key}-${depth}-${nodeIdx}`;
+ 
+ // FIX: Place the node in the center of its own allocated layout column
+ let currentX = layerLeftX + (columnWidth / 2) - 25; // 25 is half of the node width (50px)
+ 
+ let currentRecord = { id: id, key: node.key, x: currentX, y: depth * 140 + 50, itemRef: node, linkChildren: [] };
+ records[depth].push(currentRecord);
+ 
+ if (node.children && node.children.length > 0) {
+   // Divide this node's total width pool among its direct children
+   let childWidth = columnWidth / node.children.length;
+   node.children.forEach((ch, idx) => {
+     let childLeftX = layerLeftX + (idx * childWidth);
+     let childId = calculateCoordinateSchema(ch.targetNode, depth + 1, childLeftX, childWidth, records);
+     if(childId) {
+       currentRecord.linkChildren.push({ moveIdx: ch.moveIndex, id: childId });
+     }
+   });
+ }
+ return id;
 }
 
         function createMiniSvgBoard(stateKey, drawArrows = false) {
