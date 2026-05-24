@@ -45,7 +45,7 @@
             background-color: #0056b3;
         }
     </style>
-    <!-- Three.js CDN Connections -->
+    <!-- Three.js CDN Packages -->
     <script src="https://cloudflare.com"></script>
     <script src="https://jsdelivr.net"></script>
 </head>
@@ -57,13 +57,13 @@
     <button id="reset-btn" onclick="resetGame()">Restart Game</button>
 
     <script>
-        // Game State Engine
-        let board = {}; // Format: "x,y,z": "X" or "O"
+        // Core Game Engine State Structures
+        let board = {}; 
         let turn = "X";
         let history = { "X": [], "O": [] }; 
         let gameOver = false;
 
-        // Three.js Framework Initializer
+        // Three.js Framework Initialization Scene Properties
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x1a1a1a);
@@ -78,14 +78,14 @@
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
-        // Global Ambient and Directional Lighting Elements
+        // Illumination Vectors
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
         dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
 
-        // Grid Sizing and Key Raycasting Parameters
+        // Vector Projection Properties and Spacing
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         let clickableObjects = [];
@@ -94,6 +94,7 @@
         const spacing = 1.8;
 
         function createGrid() {
+            // Clean arrays before regenerating grid matrix
             clickableObjects = [];
             positionToMesh = {};
             
@@ -168,7 +169,7 @@
         function checkWin(player) {
             const lines = [];
 
-            // 1. Rows, Columns, and Pillars
+            // 1. Orthogonal Grid Lines (Columns, Rows, Pillars)
             for (let i = 0; i < 3; i++) {
                 for (let j = 0; j < 3; j++) {
                     lines.push([[i,j,0], [i,j,1], [i,j,2]]); 
@@ -189,7 +190,7 @@
                 lines.push([[i,2,0], [i,1,1], [i,0,2]]);
             }
 
-            // 3. Structural 3D Spacial Diagonals
+            // 3. True 3D Cross-Cube Corner Spacial Diagonals
             lines.push([[0,0,0], [1,1,1], [2,2,2]]);
             lines.push([[2,0,0], [1,1,1], [0,2,2]]);
             lines.push([[0,2,0], [1,1,1], [2,0,2]]);
