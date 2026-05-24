@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tic-Tac-Toe (3 Piece Limit)</title>
+    <title>3D Drop Shadow Tic-Tac-Toe</title>
     <style>
         body {
             margin: 0;
@@ -19,17 +19,19 @@
         }
         #info {
             font-size: 24px;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             font-weight: bold;
         }
         #sub-info {
-            font-size: 16px;
+            font-size: 14px;
             margin-bottom: 20px;
             color: #aaa;
         }
-        #canvas-container {
-            width: 100%;
-            height: 70vh;
+        canvas {
+            background-color: #252525;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            cursor: pointer;
         }
         #reset-btn {
             padding: 10px 20px;
@@ -45,220 +47,132 @@
             background-color: #0056b3;
         }
     </style>
-    
-    <!-- Cleaned CDN fallbacks completely omitting Cloudflare -->
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://jsdelivr.net"></script>
 </head>
 <body>
 
     <div id="info">Player X's Turn</div>
     <div id="sub-info">Max 3 pieces per player. Placing a 4th moves your oldest piece!</div>
-    <div id="canvas-container"></div>
-    <button id="reset-btn" onclick="resetGame()">Restart Game</button>
+    <canvas id="gameCanvas" width="450" height="450"></canvas>
+    <button id="reset-btn">Restart Game</button>
 
     <script>
-        let board = {}; 
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const size = 450;
+        const cellSize = size / 3;
+
+        // Game state variables
+        let board = Array(9).fill(null);
         let turn = "X";
-        let history = { "X": [], "O": [] }; 
+        let history = { "X": [], "O": [] };
         let gameOver = false;
 
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a);
+        function drawBoard() {
+            ctx.clearRect(0, 0, size, size);
 
-        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-        camera.position.set(5, 5, 8);
+            // Draw grid lines
+            ctx.strokeStyle = "#444";
+            ctx.lineWidth = 6;
+            ctx.lineCap = "round";
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);
+            for (let i = 1; i < 3; i++) {
+                // Vertical lines
+                ctx.beginPath();
+                ctx.moveTo(i * cellSize, 20);
+                ctx.lineTo(i * cellSize, size - 20);
+                ctx.stroke();
 
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        dirLight.position.set(10, 20, 10);
-        scene.add(dirLight);
-
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        let clickableObjects = [];
-        let positionToMesh = {}; 
-        let pieceMeshes = {};    
-        const spacing = 1.8;
-
-        function createGrid() {
-            clickableObjects = [];
-            positionToMesh = {};
-            
-            for (let x = 0; x < 3; x++) {
-                for (let y = 0; y < 3; y++) {
-                    for (let z = 0; z < 3; z++) {
-                        const posX = (x - 1) * spacing;
-                        const posY = (y - 1) * spacing;
-                        const posZ = (z - 1) * spacing;
-
-                        const geometry = new THREE.SphereGeometry(0.2, 16, 16);
-                        const material = new THREE.MeshPhongMaterial({
-                            color: 0x555555,
-                            transparent: true,
-                            opacity: 0.4
-                        });
-                        const sphere = new THREE.Mesh(geometry, material);
-                        sphere.position.set(posX, posY, posZ);
-                        
-                        sphere.userData = { gridPos: [x, y, z] };
-                        
-                        scene.add(sphere);
-                        clickableObjects.push(sphere);
-                        positionToMesh[`${x},${y},${z}`] = sphere;
-                    }
-                }
+                // Horizontal lines
+                ctx.beginPath();
+                ctx.moveTo(20, i * cellSize);
+                ctx.lineTo(size - 20, i * cellSize);
+                ctx.stroke();
             }
 
-            const gridHelperY0 = new THREE.GridHelper(spacing * 2, 2, 0x444444, 0x333333);
-            gridHelperY0.position.y = -spacing;
-            scene.add(gridHelperY0);
+            // Draw pieces with 3D drop shadow text effect
+            ctx.font = "bold 90px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
 
-            const gridHelperY2 = new THREE.GridHelper(spacing * 2, 2, 0x444444, 0x333333);
-            gridHelperY2.position.y = spacing;
-            scene.add(gridHelperY2);
-        }
+            for (let i = 0; i < 9; i++) {
+                if (!board[i]) continue;
 
-        function spawnPiece(player, pos) {
-            const [x, y, z] = pos;
-            const posX = (x - 1) * spacing;
-            const posY = (y - 1) * spacing;
-            const posZ = (z - 1) * spacing;
-            let mesh;
+                const x = (i % 3) * cellSize + cellSize / 2;
+                const y = Math.floor(i / 3) * cellSize + cellSize / 2;
+                const p = board[i];
 
-            if (player === "X") {
-                const geometry = new THREE.TorusGeometry(0.3, 0.1, 8, 24);
-                const material = new THREE.MeshPhongMaterial({ color: 0xff3333, shininess: 100 });
-                mesh = new THREE.Mesh(geometry, material);
-                mesh.rotation.x = Math.PI / 2;
-            } else {
-                const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-                const material = new THREE.MeshPhongMaterial({ color: 0x3333ff, shininess: 100 });
-                mesh = new THREE.Mesh(geometry, material);
-            }
+                // Set up distinctive colors for X and O
+                const mainColor = (p === "X") ? "#ff4d4d" : "#3399ff";
+                const shadowColor = (p === "X") ? "#660000" : "#003366";
 
-            mesh.position.set(posX, posY, posZ);
-            scene.add(mesh);
-            pieceMeshes[`${x},${y},${z}`] = mesh;
-            positionToMesh[`${x},${y},${z}`].visible = false;
-        }
+                // Layer 1: The bottom shadow (shifted down and right)
+                ctx.fillStyle = shadowColor;
+                ctx.fillText(p, x + 5, y + 6);
 
-        function removePiece(posKey) {
-            if (pieceMeshes[posKey]) {
-                scene.remove(pieceMeshes[posKey]);
-                delete pieceMeshes[posKey];
-            }
-            if (positionToMesh[posKey]) {
-                positionToMesh[posKey].visible = true;
+                // Layer 2: The top main element
+                ctx.fillStyle = mainColor;
+                ctx.fillText(p, x, y);
             }
         }
 
-        function checkWin(player) {
-            const lines = [];
-
-            for (let i = 0; i < 3; i++) {
-                for (let j = 0; j < 3; j++) {
-                    lines.push([[i,j,0], [i,j,1], [i,j,2]]); 
-                    lines.push([[i,0,j], [i,1,j], [i,2,j]]); 
-                    lines.push([[0,i,j], [1,i,j], [2,i,j]]); 
-                }
-            }
-
-            for (let i = 0; i < 3; i++) {
-                lines.push([[0,0,i], [1,1,i], [2,2,i]]);
-                lines.push([[2,0,i], [1,1,i], [0,2,i]]);
-                
-                lines.push([[0,i,0], [1,i,1], [2,i,2]]);
-                lines.push([[2,i,0], [1,i,1], [0,i,2]]);
-                
-                lines.push([[i,0,0], [i,1,1], [i,2,2]]);
-                lines.push([[i,2,0], [i,1,1], [i,0,2]]);
-            }
-
-            // Fixed structural spatial matrices
-            lines.push([[0,0,0], [1,1,1], [2,2,2]]);
-            lines.push([[2,0,0], [1,1,1], [0,2,2]]);
-            lines.push([[0,2,0], [1,1,1], [2,0,2]]);
-            lines.push([[0,0,2], [1,1,1], [2,2,0]]);
-
-            return lines.some(line => 
-                line.every(pos => board[`${pos[0]},${pos[1]},${pos[2]}`] === player)
-            );
+        function checkWin(p) {
+            const wins = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+                [0, 4, 8], [2, 4, 6]             // Diagonals
+            ];
+            return wins.some(combo => combo.every(idx => board[idx] === p));
         }
 
-        function onPointerDown(event) {
+        canvas.addEventListener('click', (e) => {
             if (gameOver) return;
 
-            const rect = renderer.domElement.getBoundingClientRect();
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
 
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(clickableObjects);
+            const col = Math.floor(clickX / cellSize);
+            const row = Math.floor(clickY / cellSize);
+            const index = row * 3 + col;
 
-            if (intersects.length > 0) {
-                const clickedSphere = intersects.object;
-                const coord = clickedSphere.userData.gridPos;
-                const posKey = `${coord[0]},${coord[1]},${coord[2]}`;
+            if (board[index] === null) {
+                // Register piece placement
+                board[index] = turn;
+                history[turn].push(index);
 
-                if (!board[posKey]) {
-                    board[posKey] = turn;
-                    history[turn].push(coord);
-                    spawnPiece(turn, coord);
-
-                    if (history[turn].length > 3) {
-                        const oldCoord = history[turn].shift();
-                        const oldKey = `${oldCoord[0]},${oldCoord[1]},${oldCoord[2]}`;
-                        delete board[oldKey];
-                        removePiece(oldKey);
-                    }
-
-                    if (checkWin(turn)) {
-                        document.getElementById('info').innerText = `Player ${turn} Wins! 🎉`;
-                        gameOver = true;
-                        return;
-                    }
-
-                    turn = (turn === "X") ? "O" : "X";
-                    document.getElementById('info').innerText = `Player ${turn}'s Turn`;
+                // Apply 3-piece limit rule
+                if (history[turn].length > 3) {
+                    const oldestIndex = history[turn].shift();
+                    board[oldestIndex] = null;
                 }
+
+                drawBoard();
+
+                if (checkWin(turn)) {
+                    document.getElementById('info').innerText = `Player ${turn} Wins! 🎉`;
+                    gameOver = true;
+                    return;
+                }
+
+                // Swap turns
+                turn = (turn === "X") ? "O" : "X";
+                document.getElementById('info').innerText = `Player ${turn}'s Turn`;
             }
-        }
+        });
 
         function resetGame() {
-            Object.keys(pieceMeshes).forEach(key => removePiece(key));
-            board = {};
+            board = Array(9).fill(null);
             history = { "X": [], "O": [] };
             turn = "X";
             gameOver = false;
-            document.getElementById('info').innerText = `Player X's Turn`;
+            document.getElementById('info').innerText = "Player X's Turn";
+            drawBoard();
         }
 
-        window.addEventListener('resize', () => {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        });
+        document.getElementById('reset-btn').addEventListener('click', resetGame);
 
-        window.addEventListener('pointerdown', onPointerDown);
-
-        createGrid();
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        animate();
+        // Initial paint run
+        drawBoard();
     </script>
 </body>
 </html>
