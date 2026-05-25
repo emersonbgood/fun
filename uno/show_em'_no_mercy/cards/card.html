@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Card Generator (0-9)</title>
+  <style>
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #222; font-family: sans-serif; margin: 0; }
+    .controls { margin-bottom: 20px; }
+    button { padding: 10px 15px; font-size: 16px; cursor: pointer; margin: 0 2px; font-weight: bold; }
+    svg { width: 300px; height: 440px; }
+  </style>
+</head>
+<body>
+
+  <!-- Test controls for 0-9 -->
+  <div class="controls">
+    <button onclick="setCardValue(0)">0 (Swap)</button>
+    <button onclick="setCardValue(1)">1</button>
+    <button onclick="setCardValue(2)">2</button>
+    <button onclick="setCardValue(3)">3</button>
+    <button onclick="setCardValue(4)">4</button>
+    <button onclick="setCardValue(5)">5</button>
+    <button onclick="setCardValue(6)">6</button>
+    <button onclick="setCardValue(7)">7</button>
+    <button onclick="setCardValue(8)">8</button>
+    <button onclick="setCardValue(9)">9</button>
+  </div>
+
+  <!-- The SVG Card -->
+  <svg xmlns="http://w3.org" viewBox="0 0 300 440">
+    <style>
+      .card-border { fill: #111111; }
+      .card-bg { fill: #fbc02d; }
+      .card-oval { fill: #f57f17; stroke: #ffffff; stroke-width: 7; }
+      .card-text-base { font-family: "Arial Black", Gadget, sans-serif; font-weight: 900; }
+      .text-stroke { fill: #000000; stroke: #000000; stroke-linejoin: miter; }
+      .text-face { fill: #ffffff; }
+      .icon-stroke { fill: none; stroke: #000000; stroke-linejoin: round; stroke-linecap: round; }
+      .icon-face { fill: none; stroke: #ffffff; stroke-linejoin: round; stroke-linecap: round; }
+    </style>
+
+    <defs>
+      <clipPath id="cardClip">
+        <rect x="0" y="0" width="300" height="440" rx="28" ry="28" />
+      </clipPath>
+
+      <!-- CUSTOM SWAP GRAPHICS FOR 0 -->
+      <g id="center-swap">
+        <path d="M -30,-50 C 20,-50 50,-20 50,20 L 50,40 M 50,40 L 30,15 M 50,40 L 70,15" class="icon-stroke" stroke-width="26" />
+        <path d="M 30,50 C -20,50 -50,20 -50,-20 L -50,-40 M -50,-40 L -30,-15 M -50,-40 L -70,-15" class="icon-stroke" stroke-width="26" />
+        <path d="M -30,-50 C 20,-50 50,-20 50,20 L 50,40 M 50,40 L 30,15 M 50,40 L 70,15" class="icon-face" stroke-width="12" />
+        <path d="M 30,50 C -20,50 -50,20 -50,-20 L -50,-40 M -50,-40 L -30,-15 M -50,-40 L -70,-15" class="icon-face" stroke-width="12" />
+      </g>
+
+      <g id="corner-swap">
+        <path d="M -10,-16 C 6,-16 16,-6 16,6 L 16,13 M 16,13 L 9,5 M 16,13 L 23,5" class="icon-stroke" stroke-width="10" />
+        <path d="M 10,16 C -6,16 -16,6 -16,-6 L -16,-13 M -16,-13 L -9,-5 M -16,-13 L -23,-5" class="icon-stroke" stroke-width="10" />
+        <path d="M -10,-16 C 6,-16 16,-6 16,6 L 16,13 M 16,13 L 9,5 M 16,13 L 23,5" class="icon-face" stroke-width="4" />
+        <path d="M 10,16 C -6,16 -16,6 -16,-6 L -16,-13 M -16,-13 L -9,-5 M -16,-13 L -23,-5" class="icon-face" stroke-width="4" />
+      </g>
+
+      <!-- CENTER NUMBERS (1-9) -->
+      <g id="center-1"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">1</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">1</text></g>
+      <g id="center-2"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">2</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">2</text></g>
+      <g id="center-3"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">3</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">3</text></g>
+      <g id="center-4"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">4</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">4</text></g>
+      <g id="center-5"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">5</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">5</text></g>
+      <g id="center-6"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">6</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">6</text></g>
+      <g id="center-7"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">7</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">7</text></g>
+      <g id="center-8"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">8</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">8</text></g>
+      <g id="center-9"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">9</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">9</text></g>
+
+      <!-- CORNER NUMBERS (1-9) -->
+      <g id="corner-1"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">1</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">1</text></g>
+      <g id="corner-2"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">2</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">2</text></g>
+      <g id="corner-3"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">3</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">3</text></g>
+      <g id="corner-4"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">4</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">4</text></g>
+      <g id="corner-5"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">5</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">5</text></g>
+      <g id="corner-6"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">6</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">6</text></g>
+      <g id="corner-7"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">7</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">7</text></g>
+      <g id="corner-8"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">8</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">8</text></g>
+      <g id="corner-9"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">9</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">9</text></g>
+    </defs>
+
+    <!-- Card Base Structure -->
+    <g clip-path="url(#cardClip)">
+      <rect width="300" height="440" class="card-border" />
+      <rect x="14" y="14" width="272" height="412" rx="16" ry="16" class="card-bg" />
+      <ellipse cx="150" cy="220" rx="155" ry="72" class="card-oval" transform="rotate(-53, 150, 220)" />
+
+      <!-- Center Display Target -->
+      <use id="card-center-target" href="#center-swap" x="150" y="220" />
+
+      <!-- Top Left Corner Target Group -->
+      <g id="card-top-group" transform="translate(42, 42)">
+        <use id="card-top-target" href="#corner-swap" />
+      </g>
+
+      <!-- Bottom Right Corner Target Group (Inverted) -->
+      <g id="card-bottom-group" transform="translate(258, 398) rotate(180)">
+        <use id="card-bottom-target" href="#corner-swap" />
+      </g>
+    </g>
+  </svg>
+
+  <script>
+    function setCardValue(number) {
+      if (number < 0 || number > 9) {
+        console.error("Out of bounds. Choose 0-9.");
+        return;
+      }
+
+      const centerTarget = document.getElementById('card-center-target');
+      const topTarget = document.getElementById('card-top-target');
+      const bottomTarget = document.getElementById('card-bottom-target');
+      const topGroup = document.getElementById('card-top-group');
+      const bottomGroup = document.getElementById('card-bottom-group');
+
+      if (number === 0) {
+        // Apply swap vector symbols
+        centerTarget.setAttribute('href', '#center-swap');
+        topTarget.setAttribute('href', '#corner-swap');
+        // ... continuing inside: if (number === 0) {
+        centerTarget.setAttribute('href', '#center-swap');
+        topTarget.setAttribute('href', '#corner-swap');
+        bottomTarget.setAttribute('href', '#corner-swap');
+        
+        // Offset padding for vectors
+        topGroup.setAttribute('transform', 'translate(42, 42)');
+        bottomGroup.setAttribute('transform', 'translate(258, 398) rotate(180)');
+      } else {
+        // Apply text numbers (7 functions normally here)
+        centerTarget.setAttribute('href', `#center-${number}`);
+        topTarget.setAttribute('href', `#corner-${number}`);
+        bottomTarget.setAttribute('href', `#corner-${number}`);
+        
+        // Reset padding positions for standard font elements
+        topGroup.setAttribute('transform', 'translate(42, 52)');
+        bottomGroup.setAttribute('transform', 'translate(258, 388) rotate(180)');
+      }
+    }
+
+    // Default initialization straight to 0 layout
+    setCardValue(0);
+  </script>
+</body>
+</html>
