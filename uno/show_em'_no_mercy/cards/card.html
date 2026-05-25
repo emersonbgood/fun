@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dynamic Card Generator (0-9)</title>
+  <title>UNO No Mercy Deck Simulation</title>
   <style>
     body { 
       display: flex; 
@@ -29,7 +29,6 @@
       gap: 10px;
     }
 
-    /* Interactive clickable deck look */
     .draw-deck-pile {
       width: 150px;
       height: 220px;
@@ -39,6 +38,7 @@
       box-shadow: -4px 4px 0px #000, -8px 8px 0px #333;
       cursor: pointer;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       color: #fff;
@@ -48,6 +48,9 @@
       letter-spacing: 1px;
       user-select: none;
       transition: transform 0.1s;
+      text-align: center;
+      padding: 10px;
+      box-sizing: border-box;
     }
     .draw-deck-pile:active {
       transform: translate(-2px, 2px);
@@ -61,7 +64,6 @@
       color: #666;
     }
 
-    /* Playmat card display */
     .card-display {
       width: 300px;
       height: 440px;
@@ -72,25 +74,35 @@
       font-size: 14px;
       margin-top: 5px;
     }
+    
+    .info-card {
+      color: #fff;
+      font-size: 14px;
+      background: rgba(0,0,0,0.4);
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-align: center;
+      max-width: 150px;
+    }
   </style>
 </head>
 <body>
 
   <div class="game-container">
-    <!-- DRAW DECK PILE (LEFT) -->
+    <!-- DRAW DECK PILE -->
     <div class="deck-area">
       <div id="draw-pile" class="draw-deck-pile" onclick="drawCard()">
         Draw Card
       </div>
-      <div id="deck-count" class="status-text">Cards Left: 80</div>
+      <div id="deck-count" class="status-text">Cards Left: --</div>
+      <div id="card-info" class="info-card">Click deck to start</div>
     </div>
 
-    <!-- CURRENT PLAYED CARD GRAPHICS (RIGHT DISCARD PILE POSITION) -->
+    <!-- PLAYED DISCARD PILE POSITION -->
     <div class="card-display">
       <svg id="card-svg" xmlns="http://w3.org" viewBox="0 0 300 440" width="100%" height="100%">
         <style>
           .card-border { fill: #111111; }
-          /* Dynamic classes controlled via script style hooks */
           .card-bg { fill: #fbc02d; }
           .card-oval { fill: #f57f17; stroke: #ffffff; stroke-width: 7; }
           
@@ -106,7 +118,7 @@
             <rect x="0" y="0" width="300" height="440" rx="28" ry="28" />
           </clipPath>
 
-          <!-- 0 SWAP GRAPHICS (Perfect Circle Arc Paths) -->
+          <!-- 0 SWAP GRAPHICS -->
           <g id="center-swap-0">
             <path d="M -45,0 A 45,45 0 0,1 45,0 L 45,15 M 45,15 L 25,0 M 45,15 L 65,0" class="icon-stroke" stroke-width="26" />
             <path d="M 45,0 A 45,45 0 0,1 -45,0 L -45,-15 M -45,-15 L -25,0 M -45,-15 L -65,0" class="icon-stroke" stroke-width="26" />
@@ -120,7 +132,7 @@
             <path d="M 14,0 A 14,14 0 0,1 -14,0 L -14,-5 M -14,-5 L -7,0 M -14,-5 L -21,0" class="icon-face" stroke-width="4" />
           </g>
 
-          <!-- 7 SWAP GRAPHICS (Elongated Wide Arrows <----> Layout) -->
+          <!-- 7 SWAP GRAPHICS -->
           <g id="center-swap-7">
             <path d="M -45,-35 L -75,0 L -45,35 M -75,0 L 75,0 M 45,-35 L 75,0 L 45,35" class="icon-stroke" stroke-width="24" />
             <path d="M -45,-35 L -75,0 L -45,35 M -75,0 L 75,0 M 45,-35 L 75,0 L 45,35" class="icon-face" stroke-width="10" />
@@ -130,166 +142,271 @@
             <path d="M -12,-10 L -22,0 L -12,10 M -22,0 L 22,0 M 12,-10 L 22,0 L 12,10" class="icon-face" stroke-width="4" />
           </g>
 
-          <!-- CENTER NUMBERS -->
+          <!-- NEW ACTION GRAPHICS: REVERSE -->
+          <g id="center-reverse">
+            <path d="M -40,-25 L 0,-60 L 0,-35 C 35,-35 50,-10 50,25 M 0,-35 L -20,-35 M 0,-60 L 0,-10" class="icon-stroke" stroke-width="20" />
+            <path d="M 40,25 L 0,60 L 0,35 C -35,35 -50,10 -50,-25 M 0,35 L 20,35 M 0,60 L 0,10" class="icon-stroke" stroke-width="20" />
+            <path d="M -40,-25 L 0,-60 L 0,-35 C 35,-35 50,-10 50,25" class="icon-face" stroke-width="8" />
+            <path d="M 40,25 L 0,60 L 0,35 C -35,35 -50,10 -50,-25" class="icon-face" stroke-width="8" />
+          </g>
+          <g id="corner-reverse">
+            <path d="M -10,-6 L 0,-15 L 0,-9 C 8,-9 12,-2 12,6" class="icon-stroke" stroke-width="8" />
+            <path d="M 10,6 L 0,15 L 0,9 C -8,9 -12,2 -12,-6" class="icon-stroke" stroke-width="8" />
+            <path d="M -10,-6 L 0,-15 L 0,-9 C 8,-9 12,-2 12,6" class="icon-face" stroke-width="3" />
+            <path d="M 10,6 L 0,15 L 0,9 C -8,9 -12,2 -12,-6" class="icon-face" stroke-width="3" />
+          </g>
+
+          <!-- NEW ACTION GRAPHICS: SKIP -->
+          <g id="center-skip">
+            <circle cx="0" cy="0" r="45" class="icon-stroke" stroke-width="22" />
+            <line x1="-32" y1="-32" x2="32" y2="32" class="icon-stroke" stroke-width="22" />
+            <circle cx="0" cy="0" r="45" class="icon-face" stroke-width="10" />
+            <line x1="-32" y1="-32" x2="32" y2="32" class="icon-face" stroke-width="10" />
+          </g>
+          <g id="corner-skip">
+            <circle cx="0" cy="0" r="14" class="icon-stroke" stroke-width="9" />
+            <line x1="-10" y1="-10" x2="10" y2="10" class="icon-stroke" stroke-width="9" />
+            <circle cx="0" cy="0" r="14" class="icon-face" stroke-width="4" />
+            <line x1="-10" y1="-10" x2="10" y2="10" class="icon-face" stroke-width="4" />
+          </g>
+
+          <!-- NEW ACTION GRAPHICS: DISCARD ALL -->
+          <g id="center-discardall">
+            <circle cx="-25" cy="20" r="24" class="icon-stroke" stroke-width="12" />
+            <circle cx="25" cy="20" r="24" class="icon-stroke" stroke-width="12" />
+            <circle cx="0" cy="-25" r="24" class="icon-stroke" stroke-width="12" />
+            <circle cx="-25" cy="20" r="24" class="icon-face" stroke-width="5" fill="#f57f17" />
+            <circle cx="25" cy="20" r="24" class="icon-face" stroke-width="5" fill="#f57f17" />
+            <circle cx="0" cy="-25" r="24" class="icon-face" stroke-width="5" fill="#f57f17" />
+          </g>
+          <g id="corner-discardall">
+            <circle cx="-6" cy="5" r="7" class="icon-stroke" stroke-width="5" />
+            <circle cx="6" cy="5" r="7" class="icon-stroke" stroke-width="5" />
+            <circle cx="0" cy="-6" r="7" class="icon-stroke" stroke-width="5" />
+            <circle cx="-6" cy="5" r="7" class="icon-face" stroke-width="2" />
+            <circle cx="6" cy="5" r="7" class="icon-face" stroke-width="2" />
+            <circle cx="0" cy="-6" r="7" class="icon-face" stroke-width="2" />
+          </g>
+
+          <!-- NUMERICAL GLYPH DEF GENERATOR HOOKS -->
           <g id="center-0"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">0</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">0</text></g>
           <g id="center-1"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">1</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">1</text></g>
           <g id="center-2"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">2</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">2</text></g>
           <g id="center-3"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">3</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">3</text></g>
           <g id="center-4"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">4</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">4</text></g>
           <g id="center-5"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">5</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">5</text></g>
-          <g id="center-6"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">6</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">6</text></g>
-          <g id="center-7"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">7</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">7</text></g>
-          <g id="center-8"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">8</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">8</text></g>
-          <g id="center-9"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">9</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">9</text></g>
-
-          <!-- CORNER NUMBERS -->
-          <g id="corner-0"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">0</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">0</text></g>
-          <g id="corner-1"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">1</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">1</text></g>
-          <g id="corner-2"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">2</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">2</text></g>
-          <g id="corner-3"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">3</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">3</text></g>
-          <g id="corner-4"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">4</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">4</text></g>
-          <g id="corner-5"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">5</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">5</text></g>
-          <g id="corner-6"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">6</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">6</text></g>
-          <g id="corner-7"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">7</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">7</text></g>
-          <g id="corner-8"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">8</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">8</text></g>
-          <g id="corner-9"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">9</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">9</text></g>
-        </defs>
-
-        <!-- Card Base Structure -->
-        <g clip-path="url(#cardClip)">
-          <rect width="300" height="440" class="card-border" />
-          <rect id="svg-bg" x="14" y="14" width="272" height="412" rx="16" ry="16" class="card-bg" />
-          <ellipse id="svg-oval" cx="150" cy="220" rx="155" ry="72" class="card-oval" transform="rotate(-53, 150, 220)" />
-
-          <!-- Center Display Targets -->
-          <use id="card-center-target" href="#center-0" x="150" y="220" />
-          <use id="card-center-icon-target" href="#center-swap-0" x="150" y="220" style="display: none;" />
-
-          <!-- Top Left Corner Target Group -->
-          <g transform="translate(42, 52)">
-            <use id="card-top-num" href="#corner-0" />
-            <use id="card-top-icon" href="#corner-swap-0" transform="translate(0, 36)" style="display: none;" />
-          </g>
-
-          <!-- Bottom Right Corner Target Group (Inverted) -->
-          <g transform="translate(258, 388) rotate(180)">
-            <use id="card-bottom-num" href="#corner-0" />
-            <use id="card-bottom-icon" href="#corner-swap-0" transform="translate(0, 36)" style="display: none;" />
-          </g>
-        </g>
-      </svg>
-    </div>
-  </div>
-
-  <script>
-    // Color palettes as defined in your request
-    const COLORS = {
-      yellow: { bg: "#fbc02d", oval: "#f57f17" },
-      red:    { bg: "#d32f2f", oval: "#b71c1c" },
-      blue:   { bg: "#0d47a1", oval: "#1976d2" },
-      green:  { bg: "#009a44", oval: "#007a33" }
-    };
-
-    let deck = [];
-
-    // Initialize full game deck: 4 colors * 10 numbers (0-9) * 2 copies = 80 cards
-    function initDeck() {
-      deck = [];
-      const colorKeys = Object.keys(COLORS);
+      <g id="center-6"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">6</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">6</text></g>
+      <g id="center-7"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">7</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">7</text></g>
+      <g id="center-8"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">8</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">8</text></g>
+      <g id="center-9"><text x="0" y="0" class="card-text-base text-stroke" font-size="160" text-anchor="middle" dominant-baseline="central" stroke-width="16">9</text><text x="0" y="0" class="card-text-base text-face" font-size="160" text-anchor="middle" dominant-baseline="central">9</text></g>
       
-      for (let color of colorKeys) {
-        for (let num = 0; num <= 9; num++) {
-          // Push 2 copies of each number card for each color
-          deck.push({ color: color, number: num });
-          deck.push({ color: color, number: num });
-        }
+      <!-- SPECIAL CARD CENTER GRAPHICS -->
+      <g id="center-reverse">
+        <path d="M -25,-45 C 15,-45 40,-20 40,15 L 40,35 M 40,35 L 20,15 M 40,35 L 60,15" class="icon-stroke" stroke-width="26" />
+        <path d="M 25,45 C -15,45 -40,20 -40,-15 L -40,-35 M -40,-35 L -20,-15 M -40,-35 L -60,-15" class="icon-stroke" stroke-width="26" />
+        <path d="M -25,-45 C 15,-45 40,-20 40,15 L 40,35 M 40,35 L 20,15 M 40,35 L 60,15" class="icon-face" stroke-width="12" />
+        <path d="M 25,45 C -15,45 -40,20 -40,-15 L -40,-35 M -40,-35 L -20,-15 M -40,-35 L -60,-15" class="icon-face" stroke-width="12" />
+      </g>
+      <g id="center-skip">
+        <circle cx="0" cy="0" r="55" class="icon-stroke" stroke-width="24" />
+        <line x1="-39" y1="-39" x2="39" y2="39" class="icon-stroke" stroke-width="24" />
+        <circle cx="0" cy="0" r="55" class="icon-face" stroke-width="10" />
+        <line x1="-39" y1="-39" x2="39" y2="39" class="icon-face" stroke-width="10" />
+      </g>
+      <g id="center-skipall">
+        <circle cx="-25" cy="0" r="35" class="icon-stroke" stroke-width="18" />
+        <line x1="-50" y1="-25" x2="0" y2="25" class="icon-stroke" stroke-width="18" />
+        <circle cx="25" cy="0" r="35" class="icon-stroke" stroke-width="18" />
+        <line x1="0" y1="-25" x2="50" y2="25" class="icon-stroke" stroke-width="18" />
+        <circle cx="-25" cy="0" r="35" class="icon-face" stroke-width="8" />
+        <line x1="-50" y1="-25" x2="0" y2="25" class="icon-face" stroke-width="8" />
+        <circle cx="25" cy="0" r="35" class="icon-face" stroke-width="8" />
+        <line x1="0" y1="-25" x2="50" y2="25" class="icon-face" stroke-width="8" />
+      </g>
+      <g id="center-plus2"><text x="0" y="0" class="card-text-base text-stroke" font-size="120" text-anchor="middle" dominant-baseline="central" stroke-width="16">+2</text><text x="0" y="0" class="card-text-base text-face" font-size="120" text-anchor="middle" dominant-baseline="central">+2</text></g>
+      <g id="center-plus4"><text x="0" y="0" class="card-text-base text-stroke" font-size="120" text-anchor="middle" dominant-baseline="central" stroke-width="16">+4</text><text x="0" y="0" class="card-text-base text-face" font-size="120" text-anchor="middle" dominant-baseline="central">+4</text></g>
+      <g id="center-plus6"><text x="0" y="0" class="card-text-base text-stroke" font-size="120" text-anchor="middle" dominant-baseline="central" stroke-width="16">+6</text><text x="0" y="0" class="card-text-base text-face" font-size="120" text-anchor="middle" dominant-baseline="central">+6</text></g>
+      <g id="center-plus10"><text x="0" y="0" class="card-text-base text-stroke" font-size="100" text-anchor="middle" dominant-baseline="central" stroke-width="16">+10</text><text x="0" y="0" class="card-text-base text-face" font-size="100" text-anchor="middle" dominant-baseline="central">+10</text></g>
+      <g id="center-plus4rev">
+        <text x="0" y="-30" class="card-text-base text-stroke" font-size="90" text-anchor="middle" dominant-baseline="central" stroke-width="14">+4</text>
+        <text x="0" y="-30" class="card-text-base text-face" font-size="90" text-anchor="middle" dominant-baseline="central">+4</text>
+        <use href="#corner-swap-0" transform="translate(0, 40) scale(1.6)" />
+      </g>
+      <g id="center-discardall">
+        <text x="0" y="-35" class="card-text-base text-stroke" font-size="70" text-anchor="middle" dominant-baseline="central" stroke-width="12">DISCARD</text>
+        <text x="0" y="-35" class="card-text-base text-face" font-size="70" text-anchor="middle" dominant-baseline="central">DISCARD</text>
+        <text x="0" y="30" class="card-text-base text-stroke" font-size="80" text-anchor="middle" dominant-baseline="central" stroke-width="14">ALL</text>
+        <text x="0" y="30" class="card-text-base text-face" font-size="80" text-anchor="middle" dominant-baseline="central">ALL</text>
+      </g>
+
+      <!-- CORNER NUMBERS AND SPECIALS -->
+      <g id="corner-0"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">0</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">0</text></g>
+      <g id="corner-1"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">1</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">1</text></g>
+      <g id="corner-2"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">2</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">2</text></g>
+      <g id="corner-3"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">3</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">3</text></g>
+      <g id="corner-4"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">4</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">4</text></g>
+      <g id="corner-5"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">5</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">5</text></g>
+      <g id="corner-6"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">6</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">6</text></g>
+      <g id="corner-7"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">7</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">7</text></g>
+      <g id="corner-8"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">8</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">8</text></g>
+      <g id="corner-9"><text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke-width="8">9</text><text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">9</text></g>
+      
+      <g id="corner-reverse" transform="scale(0.55)"><use href="#center-reverse"/></g>
+      <g id="corner-skip" transform="scale(0.45)"><use href="#center-skip"/></g>
+      <g id="corner-skipall" transform="scale(0.55)"><use href="#center-skipall"/></g>
+      <g id="corner-plus2"><text x="0" y="0" class="card-text-base text-stroke" font-size="42" text-anchor="middle" dominant-baseline="central" stroke-width="8">+2</text><text x="0" y="0" class="card-text-base text-face" font-size="42" text-anchor="middle" dominant-baseline="central">+2</text></g>
+      <g id="corner-plus4"><text x="0" y="0" class="card-text-base text-stroke" font-size="42" text-anchor="middle" dominant-baseline="central" stroke-width="8">+4</text><text x="0" y="0" class="card-text-base text-face" font-size="42" text-anchor="middle" dominant-baseline="central">+4</text></g>
+      <g id="corner-plus6"><text x="0" y="0" class="card-text-base text-stroke" font-size="42" text-anchor="middle" dominant-baseline="central" stroke-width="8">+6</text><text x="0" y="0" class="card-text-base text-face" font-size="42" text-anchor="middle" dominant-baseline="central">+6</text></g>
+      <g id="corner-plus10"><text x="0" y="0" class="card-text-base text-stroke" font-size="34" text-anchor="middle" dominant-baseline="central" stroke-width="8">+10</text><text x="0" y="0" class="card-text-base text-face" font-size="34" text-anchor="middle" dominant-baseline="central">+10</text></g>
+      <g id="corner-plus4rev" transform="scale(0.55)"><use href="#center-plus4rev"/></g>
+      <g id="corner-discardall"><text x="0" y="0" class="card-text-base text-stroke" font-size="34" text-anchor="middle" dominant-baseline="central" stroke-width="8">DA</text><text x="0" y="0" class="card-text-base text-face" font-size="34" text-anchor="middle" dominant-baseline="central">DA</text></g>
+    </defs>
+
+    <!-- Card Base Structure -->
+    <g clip-path="url(#cardClip)">
+      <rect width="300" height="440" class="card-border" />
+      <rect id="svg-bg" x="14" y="14" width="272" height="412" rx="16" ry="16" class="card-bg" />
+      <ellipse id="svg-oval" cx="150" cy="220" rx="155" ry="72" class="card-oval" transform="rotate(-53, 150, 220)" />
+
+      <!-- Display Targets -->
+      <use id="card-center-target" href="#center-0" x="150" y="220" />
+      <use id="card-center-icon-target" href="#center-swap-0" x="150" y="220" style="display: none;" />
+
+      <!-- Top Corner Target Group -->
+      <g transform="translate(42, 52)">
+        <use id="card-top-num" href="#corner-0" />
+        <use id="card-top-icon" href="#corner-swap-0" transform="translate(0, 36)" style="display: none;" />
+      </g>
+
+      <!-- Bottom Corner Target Group -->
+      <g transform="translate(258, 388) rotate(180)">
+        <use id="card-bottom-num" href="#corner-0" />
+        <use id="card-bottom-icon" href="#corner-swap-0" transform="translate(0, 36)" style="display: none;" />
+      </g>
+    </g>
+  </svg>
+</div>
+
+<script>
+  // Color configuration mapping
+  const COLORS = {
+    yellow: { bg: "#fbc02d", oval: "#f57f17" },
+    red:    { bg: "#d32f2f", oval: "#b71c1c" },
+    blue:   { bg: "#0d47a1", oval: "#1976d2" },
+    green:  { bg: "#009a44", oval: "#007a33" },
+    black:  { bg: "#111111", oval: "#444444" }
+  };
+
+  let deck = [];
+
+  // Generate exact No Mercy quantitative card matrix
+  function initDeck() {
+    deck = [];
+    const coloredKeys = ['yellow', 'red', 'blue', 'green'];
+
+    // 1. Core Colored Card Generation Loop
+    for (let color of coloredKeys) {
+      // 2 copies of numbers 0-9
+      for (let num = 0; num <= 9; num++) {
+        deck.push({ type: 'number', val: num, color: color });
+        deck.push({ type: 'number', val: num, color: color });
       }
-      shuffleDeck();
+      // 3 of each: Reverse, Skip, +2, Skip All, Discard All
+      for (let i = 0; i < 3; i++) {
+        deck.push({ type: 'special', val: 'reverse', color: color });
+        deck.push({ type: 'special', val: 'skip', color: color });
+        deck.push({ type: 'special', val: 'plus2', color: color });
+        deck.push({ type: 'special', val: 'skipall', color: color });
+        deck.push({ type: 'special', val: 'discardall', color: color });
+      }
+      // 2 of each: +4
+      for (let i = 0; i < 2; i++) {
+        deck.push({ type: 'special', val: 'plus4', color: color });
+      }
     }
 
-    // Fisher-Yates Shuffle algorithm for true randomness
-    function shuffleDeck() {
-      for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-      }
+    // 2. Core Wild Black Card Generation Loop
+    for (let i = 0; i < 12; i++) deck.push({ type: 'special', val: 'plus4rev', color: 'black' });
+    for (let i = 0; i < 4; i++)  deck.push({ type: 'special', val: 'plus6', color: 'black' });
+    for (let i = 0; i < 4; i++)  deck.push({ type: 'special', val: 'plus10', color: 'black' });
+
+    shuffleDeck();
+  }
+
+  function shuffleDeck() {
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
     }
+  }
 
-    // Engine function updating physical nodes
-    function updateCardGraphic(number, colorName) {
-      const bgNode = document.getElementById('svg-bg');
-      const ovalNode = document.getElementById('svg-oval');
-      
-      const centerTarget = document.getElementById('card-center-target');
-      const centerIconTarget = document.getElementById('card-center-icon-target');
-      
-      const topNum = document.getElementById('card-top-num');
-      const topIcon = document.getElementById('card-top-icon');
-      
-      const bottomNum = document.getElementById('card-bottom-num');
-      const bottomIcon = document.getElementById('card-bottom-icon');
+  // Graphics update logic processing
+  function updateCardGraphic(card) {
+    const bgNode = document.getElementById('svg-bg');
+    const ovalNode = document.getElementById('svg-oval');
+    const centerTarget = document.getElementById('card-center-target');
+    const centerIconTarget = document.getElementById('card-center-icon-target');
+    const topNum = document.getElementById('card-top-num');
+    const topIcon = document.getElementById('card-top-icon');
+    const bottomNum = document.getElementById('card-bottom-num');
+    const bottomIcon = document.getElementById('card-bottom-icon');
 
-      // 1. Shift color theme engine values
-      const palette = COLORS[colorName];
-      bgNode.style.fill = palette.bg;
-      ovalNode.style.fill = palette.oval;
+    // Reset color theme layout styles
+    const palette = COLORS[card.color];
+    bgNode.style.fill = palette.bg;
+    ovalNode.style.fill = palette.oval;
 
-      // 2. Link standard number vectors
-      centerTarget.setAttribute('href', `#center-${number}`);
-      topNum.setAttribute('href', `#corner-${number}`);
-      bottomNum.setAttribute('href', `#corner-${number}`);
+    // Reset visibility defaults
+    centerTarget.style.display = "block";
+    centerIconTarget.style.display = "none";
+    topIcon.style.display = "none";
+    bottomIcon.style.display = "none";
 
-      // 3. Evaluate conditional overlay symbols
-      if (number === 0) {
+    if (card.type === 'number') {
+      centerTarget.setAttribute('href', `#center-${card.val}`);
+      topNum.setAttribute('href', `#corner-${card.val}`);
+      bottomNum.setAttribute('href', `#corner-${card.val}`);
+
+      // Numerical exception logic overlays
+      if (card.val === 0) {
         centerTarget.style.display = "none";
         centerIconTarget.style.display = "block";
         centerIconTarget.setAttribute('href', '#center-swap-0');
-        
         topIcon.style.display = "block";
         bottomIcon.style.display = "block";
         topIcon.setAttribute('href', '#corner-swap-0');
         bottomIcon.setAttribute('href', '#corner-swap-0');
-        
-      } else if (number === 7) {
-        centerTarget.style.display = "block";
-        centerIconTarget.style.display = "none";
-        
+      } else if (card.val === 7) {
         topIcon.style.display = "block";
         bottomIcon.style.display = "block";
         topIcon.setAttribute('href', '#corner-swap-7');
         bottomIcon.setAttribute('href', '#corner-swap-7');
-        
-      } else {
-        centerTarget.style.display = "block";
-        centerIconTarget.style.display = "none";
-        topIcon.style.display = "none";
-        bottomIcon.style.display = "none";
       }
+    } else {
+      // Special action cards matching definitions
+      centerTarget.setAttribute('href', `#center-${card.val}`);
+      topNum.setAttribute('href', `#corner-${card.val}`);
+      bottomNum.setAttribute('href', `#corner-${card.val}`);
     }
+  }
 
-    // Main interaction handler triggered on click
-    function drawCard() {
-      if (deck.length === 0) return;
+  function drawCard() {
+    if (deck.length === 0) return;
 
-      // Pop card from randomized array
-      const drawnCard = deck.pop();
-      
-      // Update UI elements
-      updateCardGraphic(drawnCard.number, drawnCard.color);
-      document.getElementById('deck-count').innerText = `Cards Left: ${deck.length}`;
+    const drawnCard = deck.pop();
+    updateCardGraphic(drawnCard);
+    document.getElementById('deck-count').innerText = `Cards Left: ${deck.length}`;
 
-      // Mark visual state if empty
-      if (deck.length === 0) {
-        const drawPile = document.getElementById('draw-pile');
-        drawPile.classList.add('empty');
-        drawPile.innerText = "Empty";
-      }
+    if (deck.length === 0) {
+      const drawPile = document.getElementById('draw-pile');
+      drawPile.classList.add('empty');
+      drawPile.innerText = "Empty";
     }
+  }
 
-    // Run setup immediately on load
-    initDeck();
-    // Show a card immediately on load
-    drawCard();
-  </script>
+  // Initialize and trigger auto first draw simulation
+  initDeck();
+  drawCard();
+</script>
 </body>
 </html>
