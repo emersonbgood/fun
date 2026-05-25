@@ -26,20 +26,10 @@
 
     <!-- Reusable Corner 0 Graphic -->
     <g id="cornerZero">
-      <text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke="#000000" stroke-width="8" stroke-linejoin="miter">0</text>
-      <text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">0</text>
+      <text x="0" y="0" class="card-text-base text-stroke" font-size="52" text-anchor="middle" dominant-baseline="central" stroke="#000000" stroke-width="8" stroke-linejoin="miter">1</text>
+      <text x="0" y="0" class="card-text-base text-face" font-size="52" text-anchor="middle" dominant-baseline="central">1</text>
     </g>
 
-    <!-- Reusable Pass/No Mercy Cycle Icon -->
-    <g id="cycleIcon">
-      <!-- Outer black silhouette backing for legibility -->
-      <path d="M -8,-2 A 9,9 0 1,1 -2,7 M 8,2 A 9,9 0 1,1 2,-7" fill="none" stroke="#000000" stroke-width="6" stroke-linecap="round"/>
-      <path d="M -5,10 L -9,6 L -5,2 M 5,-10 L 9,-6 L 5,-2" fill="none" stroke="#000000" stroke-width="6" stroke-linecap="miter" stroke-linejoin="miter"/>
-      
-      <!-- Crisp white foreground icon lines -->
-      <path d="M -8,-2 A 9,9 0 1,1 -2,7 M 8,2 A 9,9 0 1,1 2,-7" class="icon-graphic"/>
-      <path d="M -5,10 L -9,6 L -5,2 M 5,-10 L 9,-6 L 5,-2" class="icon-graphic" stroke-linejoin="miter"/>
-    </g>
   </defs>
 
   <!-- Card Body -->
