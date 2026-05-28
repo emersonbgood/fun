@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base Translator</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --panel-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --btn-bg: #3e3e3e;
+            --btn-active: #5c5c5c;
+            --accent: #007acc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 500px;
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .section-label {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .base-controls {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .base-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .base-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .keypad-base {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 4px;
+        }
+
+        .keypad-base button {
+            padding: 8px 0;
+            font-size: 0.9rem;
+        }
+
+        .io-box {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .io-display {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            text-align: right;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .keypad-input {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        button {
+            background-color: var(--btn-bg);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 15px 0;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.1s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: #4a4a4a;
+        }
+
+        button:active {
+            background-color: var(--btn-active);
+            transform: scale(0.95);
+        }
+
+        button.wide {
+            grid-column: span 2;
+        }
+
+        button:disabled {
+            background-color: #222;
+            color: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #output {
+            color: #66ff66;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Base Translator</h2>
+
+    <div class="container">
+        <!-- Base Selectors -->
+        <div class="base-controls">
+            <div class="base-group">
+                <span class="section-label">Input Base</span>
+                <div class="base-display" id="from-base-display">10</div>
+                <div class="keypad-base" id="base-from-keypad"></div>
+            </div>
+
+            <div class="base-group">
+                <span class="section-label">Output Base</span>
+                <div class="base-display" id="to-base-display">2</div>
+                <div class="keypad-base" id="base-to-keypad"></div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="io-box">
+            <span class="section-label">Input Value</span>
+            <input type="text" id="input-val" class="io-display" value="0" readonly placeholder="0">
+            <div class="keypad-input" id="val-keypad"></div>
+        </div>
+
+        <!-- Output Section -->
+        <div class="io-box">
+            <span class="section-label">Output Value</span>
+            <div class="io-display" id="output">0</div>
+        </div>
+    </div>
+
+    <script>
+        let fromBase = 10;
+        let toBase = 2;
+        let currentValue = "0";
+
+        const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        // Generate Keypads
+        function createBaseKeypads() {
+            const containerFrom = document.getElementById('base-from-keypad');
+            const containerTo = document.getElementById('base-to-keypad');
+
+            for (let i = 2; i <= 36; i++) {
+                // From Base Keypad
+                const btnFrom = document.createElement('button');
+                btnFrom.textContent = i;
+                btnFrom.onclick = () => setBase('from', i);
+                containerFrom.appendChild(btnFrom);
+
+                // To Base Keypad
+                const btnTo = document.createElement('button');
+                btnTo.textContent = i;
+                btnTo.onclick = () => setBase('to', i);
+                containerTo.appendChild(btnTo);
+            }
+        }
+
+        function createInputKeypad() {
+            const container = document.getElementById('val-keypad');
+            
+            // Generate 0-9, A-Z dynamically
+            for (let i = 0; i < 36; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = chars[i];
+                btn.className = "input-char";
+                btn.onclick = () => appendChar(chars[i]);
+                container.appendChild(btn);
+            }
+
+            // Bottom control buttons
+            const clearBtn = document.createElement('button');
+            clearBtn.textContent = 'AC';
+            clearBtn.className = 'wide';
+            clearBtn.style.backgroundColor = '#d9534f';
+            clearBtn.onclick = clearInput;
+            container.appendChild(clearBtn);
+
+            const backspaceBtn = document.createElement('button');
+            backspaceBtn.textContent = '⌫';
+            backspaceBtn.className = 'wide';
+            backspaceBtn.style.backgroundColor = '#f0ad4e';
+            backspaceBtn.onclick = backspace;
+            container.appendChild(backspaceBtn);
+        }
+
+        function setBase(type, value) {
+            if (type === 'from') {
+                fromBase = value;
+                document.getElementById('from-base-display').textContent = value;
+            } else {
+                toBase = value;
+                document.getElementById('to-base-display').textContent = value;
+            }
+            updateInputKeypadState();
+            convert();
+        }
+
+        function updateInputKeypadState() {
+            // Disable characters that are invalid for the current input base
+            const buttons = document.querySelectorAll('.input-char');
+            buttons.forEach((btn) => {
+                const charVal = chars.indexOf(btn.textContent);
+                btn.disabled = charVal >= fromBase;
+            });
+
+            // Clean up invalid characters from the current input string 
+            // (e.g., if we had 'A' but change base from 16 to 10)
+            let cleaned = "";
+            for (let char of currentValue) {
+                if (chars.indexOf(char) < fromBase) {
+                    cleaned += char;
+                }
+            }
+            currentValue = cleaned === "" ? "0" : cleaned;
+            document.getElementById('input-val').value = currentValue;
+        }
+
+        function appendChar(char) {
+            if (currentValue === "0") {
+                currentValue = char;
+            } else {
+                currentValue += char;
+            }
+            document.getElementById('input-val').value = currentValue;
+            convert();
+        }
+
+        function backspace() {
+            if (currentValue.length > 1) {
+                currentValue = currentValue.slice(0, -1);
+            } else {
+                currentValue = "0";
+            }
+            document.getElementById('input-val').value = currentValue;
+            convert();
+        }
+
+        function clearInput() {
+            currentValue = "0";
+            document.getElementById('input-val').value = currentValue;
+            convert();
+        }
+
+        function convert() {
+            try {
+                // 1. Parse input to base 10
+                const decimalValue = parseInt(currentValue, fromBase);
+                
+                // 2. Convert base 10 to output base
+                if (isNaN(decimalValue)) {
+                    document.getElementById('output').textContent = "Error";
+                } else {
+                    document.getElementById('output').textContent = decimalValue.toString(toBase).toUpperCase();
+                }
+            } catch (e) {
+                document.getElementById('output').textContent = "Error";
+            }
+        }
+
+        // Initialize
+        createBaseKeypads();
+        createInputKeypad();
+        updateInputKeypadState();
+    </script>
+</body>
+</html>
